@@ -1,0 +1,113 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments and local Python tooling
+.venv/
+venv/
+env/
+ENV/
+.python-version
+pip-wheel-metadata/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build and packaging outputs
+build/
+dist/
+*.spec.bak
+*.egg-info/
+.eggs/
+*.manifest
+*.tmp
+*.log
+
+# PyInstaller and installer artifacts
+*.exe
+*.msi
+*.zip
+*.7z
+
+# Local runtime data
+*.db
+*.sqlite
+*.sqlite3
+chat_history.db
+.shadowlink_cache/
+
+# AI models, indexes, and local model runtimes
+models/
+rag_indexes/
+Ollama/
+
+# Local configuration with secrets or machine-specific paths
+llm_config.json
+tasks_config.json
+.env
+.env.*
+
+# Notebook and temporary data
+.ipynb_checkpoints/
+tmp/
+temp/
+
+# ============ Java / Maven ============
+shadowlink-server/**/target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+hs_err_pid*
+replay_pid*
+
+# ============ Node.js / React / Vite ============
+node_modules/
+shadowlink-web/dist/
+shadowlink-electron/dist/
+shadowlink-electron/out/
+.turbo/
+.next/
+.nuxt/
+*.tsbuildinfo
+.eslintcache
+
+# ============ Electron ============
+release/
+*.asar
+*.blockmap
+*.snap
+
+# ============ gRPC / Proto ============
+*_pb2.py
+*_pb2_grpc.py
+*_pb2.pyi
+**/*_pb2*.py
+**/generated/
+
+# ============ Docker ============
+docker-compose.override.yml
+
+# ============ Miscellaneous ============
+*.bak
+*.swp
+*.swo
+*~
