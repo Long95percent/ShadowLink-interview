@@ -1,0 +1,17 @@
+{
+  "name": "shadowlink-electron",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ShadowLink desktop shell — global hotkeys, system tray, native integration",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "tsc && electron-builder",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "electron": "^30.1.0",
+    "electron-builder": "^24.13.3",
+    "typescript": "~5.5.2"
+  }
+}

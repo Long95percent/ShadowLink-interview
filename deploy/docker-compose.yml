@@ -1,0 +1,90 @@
+version: "3.9"
+
+services:
+  # ── Java Backend ──
+  shadowlink-server:
+    build:
+      context: ../shadowlink-server
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/shadowlink?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: shadowlink
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-shadowlink123}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - shadowlink-net
+
+  # ── Python AI Service ──
+  shadowlink-ai:
+    build:
+      context: ../shadowlink-ai
+    ports:
+      - "8000:8000"
+      - "50051:50051"
+    environment:
+      SHADOWLINK_LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      SHADOWLINK_LLM_API_KEY: ${LLM_API_KEY:-}
+    volumes:
+      - ai-data:/app/data
+    networks:
+      - shadowlink-net
+
+  # ── React Frontend (Nginx) ──
+  shadowlink-web:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ../shadowlink-web/dist:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - shadowlink-server
+    networks:
+      - shadowlink-net
+
+  # ── MySQL ──
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: shadowlink
+      MYSQL_USER: shadowlink
+      MYSQL_PASSWORD: ${DB_PASSWORD:-shadowlink123}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shadowlink-net
+
+  # ── Redis ──
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - shadowlink-net
+
+volumes:
+  mysql-data:
+  redis-data:
+  ai-data:
+
+networks:
+  shadowlink-net:
+    driver: bridge

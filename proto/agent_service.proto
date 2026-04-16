@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package shadowlink.agent;
+
+option java_package = "com.shadowlink.bridge.proto";
+option java_multiple_files = true;
+
+service AgentService {
+  // Single-turn agent invocation with streaming response
+  rpc Chat (AgentRequest) returns (stream AgentEvent);
+
+  // Cancel a running agent session
+  rpc Cancel (CancelRequest) returns (CancelResponse);
+}
+
+message AgentRequest {
+  string session_id = 1;
+  string mode_id = 2;
+  string message = 3;
+  string strategy = 4;           // auto | react | plan_execute | multi_agent
+  map<string, string> metadata = 5;
+}
+
+message AgentEvent {
+  string event_type = 1;         // thought | action | observation | answer | error | done
+  string content = 2;
+  string tool_name = 3;
+  int32 token_count = 4;
+  double latency_ms = 5;
+  string step_id = 6;
+}
+
+message CancelRequest {
+  string session_id = 1;
+}
+
+message CancelResponse {
+  bool success = 1;
+}

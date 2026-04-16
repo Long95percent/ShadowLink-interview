@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package shadowlink.mcp;
+
+option java_package = "com.shadowlink.bridge.proto";
+option java_multiple_files = true;
+
+service MCPBridge {
+  // List available MCP tools for a given mode
+  rpc ListTools (ListToolsRequest) returns (ListToolsResponse);
+
+  // Execute a tool call
+  rpc CallTool (ToolCallRequest) returns (ToolCallResponse);
+}
+
+message ListToolsRequest {
+  string mode_id = 1;
+}
+
+message ListToolsResponse {
+  repeated ToolInfo tools = 1;
+}
+
+message ToolInfo {
+  string name = 1;
+  string description = 2;
+  string parameters_schema = 3;   // JSON Schema string
+}
+
+message ToolCallRequest {
+  string tool_name = 1;
+  string arguments_json = 2;
+  string session_id = 3;
+}
+
+message ToolCallResponse {
+  bool success = 1;
+  string result_json = 2;
+  string error = 3;
+  double latency_ms = 4;
+}

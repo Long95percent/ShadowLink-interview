@@ -1,0 +1,38 @@
+version: "3.9"
+
+# Development overrides — run with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  shadowlink-server:
+    build:
+      context: ../shadowlink-server
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      # Use H2 in dev mode — no MySQL dependency
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:shadowlink;DB_CLOSE_DELAY=-1;MODE=MySQL
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+    depends_on: []
+
+  shadowlink-ai:
+    volumes:
+      - ../shadowlink-ai:/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  shadowlink-web:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ../shadowlink-web:/app
+    command: ["npm", "run", "dev", "--", "--host"]
+    ports:
+      - "3000:3000"
+
+  mysql:
+    profiles:
+      - with-mysql
+
+  redis:
+    profiles:
+      - with-redis
