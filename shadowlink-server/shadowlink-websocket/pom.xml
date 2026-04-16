@@ -12,16 +12,12 @@
 
     <artifactId>shadowlink-websocket</artifactId>
     <name>ShadowLink WebSocket</name>
-    <description>Real-time streaming via WebSocket (chat, agent steps, notifications)</description>
+    <description>Real-time streaming via WebSocket + STOMP (agent output, notifications)</description>
 
     <dependencies>
         <dependency>
             <groupId>com.shadowlink</groupId>
             <artifactId>shadowlink-common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.shadowlink</groupId>
-            <artifactId>shadowlink-auth</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

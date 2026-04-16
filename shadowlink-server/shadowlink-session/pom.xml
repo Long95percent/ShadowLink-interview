@@ -12,7 +12,7 @@
 
     <artifactId>shadowlink-session</artifactId>
     <name>ShadowLink Session</name>
-    <description>Chat session lifecycle management</description>
+    <description>Chat session lifecycle and message persistence</description>
 
     <dependencies>
         <dependency>
@@ -22,6 +22,14 @@
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
         </dependency>
     </dependencies>
 </project>

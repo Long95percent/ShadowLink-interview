@@ -75,6 +75,7 @@ shadowlink-server/**/target/
 *.war
 *.ear
 .mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven/
 !.mvn/wrapper/maven-wrapper.properties
 hs_err_pid*
 replay_pid*

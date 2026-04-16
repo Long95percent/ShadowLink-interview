@@ -12,16 +12,12 @@
 
     <artifactId>shadowlink-business</artifactId>
     <name>ShadowLink Business</name>
-    <description>Core business CRUD, mode management, file management</description>
+    <description>Core business CRUD — work modes, knowledge base, plugin management</description>
 
     <dependencies>
         <dependency>
             <groupId>com.shadowlink</groupId>
             <artifactId>shadowlink-common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.shadowlink</groupId>
-            <artifactId>shadowlink-auth</artifactId>
         </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
