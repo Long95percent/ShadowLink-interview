@@ -106,6 +106,8 @@ release/
 
 # ============ Docker ============
 docker-compose.override.yml
+deploy/.env
+!deploy/.env.example
 
 # ============ Miscellaneous ============
 *.bak

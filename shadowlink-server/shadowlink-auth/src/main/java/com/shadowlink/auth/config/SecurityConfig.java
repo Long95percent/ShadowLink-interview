@@ -32,6 +32,7 @@ public class SecurityConfig {
             "/api/auth/login",
             "/api/auth/register",
             "/api/auth/refresh",
+            "/api/ai/**", // Allow L0/L1 demo AI proxy without auth token
             "/health",
             "/actuator/**",
             "/ws/**",
@@ -45,6 +46,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> {}) // Enable CORS and let it use the global CorsFilter
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(h -> h.frameOptions(fo -> fo.sameOrigin()))   // H2 console
