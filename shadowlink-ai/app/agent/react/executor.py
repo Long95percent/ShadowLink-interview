@@ -133,7 +133,7 @@ class ReactExecutor:
 
         yield StreamEvent(
             event=StreamEventType.THOUGHT,
-            data={"content": "Analyzing your request..."},
+            data={"content": "Analyzing your request and selecting tools..."},
             session_id=request.session_id,
         )
 
@@ -141,11 +141,46 @@ class ReactExecutor:
         start = time.perf_counter()
 
         try:
-            async for event in graph.astream_events(initial_state, version="v2"):
+            # Wrap astream_events with more granular event tracking and keep-alive
+            import asyncio
+            
+            # Create the iterator
+            events_it = graph.astream_events(initial_state, version="v2")
+            
+            while True:
+                try:
+                    # Wait for next event with a timeout for "Thinking" updates
+                    event = await asyncio.wait_for(events_it.__anext__(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    # No event for 5 seconds, send a "Still thinking" thought
+                    yield StreamEvent(
+                        event=StreamEventType.THOUGHT,
+                        data={"content": "Thinking... (this might take a moment)"},
+                        session_id=request.session_id,
+                    )
+                    continue
+                except StopAsyncIteration:
+                    break
+
                 kind = event.get("event", "")
+                name = event.get("name", "")
+
+                # ── Node start tracking ──
+                if kind == "on_chain_start" and name == "reason":
+                    yield StreamEvent(
+                        event=StreamEventType.THOUGHT,
+                        data={"content": "LLM is reasoning about the next step..."},
+                        session_id=request.session_id,
+                    )
+                elif kind == "on_chain_start" and name == "act":
+                    yield StreamEvent(
+                        event=StreamEventType.THOUGHT,
+                        data={"content": "Executing selected tools..."},
+                        session_id=request.session_id,
+                    )
 
                 # ── LLM token streaming ──
-                if kind == "on_chat_model_stream":
+                elif kind == "on_chat_model_stream":
                     chunk = event.get("data", {}).get("chunk")
                     if chunk and hasattr(chunk, "content") and chunk.content:
                         token_count += 1

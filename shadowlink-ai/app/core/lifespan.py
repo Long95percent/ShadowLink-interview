@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # ── 2. Initialize Tool Registry ──
     from app.mcp.registry import ToolRegistry
     from app.tools.code_executor import CodeExecutorTool
-    from app.tools.file_ops import FileReadTool
+    from app.tools.file_ops import FileReadTool, FileWriteTool
     from app.tools.knowledge_search import KnowledgeSearchTool
     from app.tools.local_search import LocalSearchTool
     from app.tools.system_tools import CalculatorTool, CurrentTimeTool
@@ -63,6 +63,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         WebSearchTool(),
         CodeExecutorTool(),
         FileReadTool(),
+        FileWriteTool(),
         KnowledgeSearchTool(),
         LocalSearchTool(),
     ]

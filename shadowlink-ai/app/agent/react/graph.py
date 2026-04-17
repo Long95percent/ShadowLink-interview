@@ -75,8 +75,11 @@ class ReactGraph:
             }
 
         try:
-            llm_with_tools = self.llm.bind_tools(self.tools)
-            response = await llm_with_tools.ainvoke(state["messages"])
+            if self.tools:
+                llm_with_tools = self.llm.bind_tools(self.tools)
+                response = await llm_with_tools.ainvoke(state["messages"])
+            else:
+                response = await self.llm.ainvoke(state["messages"])
         except Exception as e:
             logger.error(f"LLM invoke error: {e}")
             return {

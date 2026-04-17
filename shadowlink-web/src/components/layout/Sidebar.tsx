@@ -13,6 +13,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
   const sessions = useChatStore((s) => s.sessions)
   const activeSessionId = useChatStore((s) => s.activeSessionId)
   const setActiveSession = useChatStore((s) => s.setActiveSession)
+  const resetChat = useChatStore((s) => s.resetChat)
 
   return (
     <aside
@@ -60,7 +61,10 @@ export function Sidebar({ collapsed }: SidebarProps) {
 
           {/* New Chat Button */}
           <div className="px-3 py-3 border-t border-surface-tertiary">
-            <button className="w-full px-3 py-2 rounded-lg ambient-gradient text-white text-sm font-medium hover:opacity-90 transition-opacity">
+            <button 
+              onClick={() => resetChat()}
+              className="w-full px-3 py-2 rounded-lg ambient-gradient text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            >
               + New Chat
             </button>
           </div>

@@ -1,4 +1,5 @@
 export { api, ApiError } from './api'
+export { sessionApi } from './session'
 export { connectAgentSSE } from './sse'
 export type { SSEEventHandler } from './sse'
 export { getWebSocket, WebSocketService } from './websocket'

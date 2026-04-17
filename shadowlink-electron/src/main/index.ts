@@ -32,6 +32,7 @@ const PRELOAD_PATH = path.join(__dirname, '../preload/index.js')
 let mainWindow: BrowserWindow | null = null
 let quickAssistWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+let activeHotkey: string = 'Alt+Space'
 
 // ── Main Window ──
 
@@ -181,14 +182,31 @@ function createTray(): void {
 
 // ── Global Shortcuts ──
 
-function registerGlobalShortcuts(): void {
-  // Alt+Space: Toggle quick assist
-  globalShortcut.register('Alt+Space', () => {
+function registerGlobalShortcuts(shortcut?: string): void {
+  // Unregister existing toggle hotkey if it exists
+  if (activeHotkey) {
+    globalShortcut.unregister(activeHotkey)
+  }
+
+  // Use provided shortcut or fallback to current active one
+  const hotkey = shortcut || activeHotkey
+  activeHotkey = hotkey
+
+  // Register toggle quick assist
+  const success = globalShortcut.register(hotkey, () => {
     toggleQuickAssist()
   })
 
+  if (!success) {
+    console.error(`Failed to register hotkey: ${hotkey}`)
+  } else {
+    console.log(`Registered toggle hotkey: ${hotkey}`)
+  }
+
   // Ctrl+Shift+S: Take screenshot and send to AI
-  globalShortcut.register('CommandOrControl+Shift+S', async () => {
+  // This one is less likely to conflict, but we keep it separate
+  if (!globalShortcut.isRegistered('CommandOrControl+Shift+S')) {
+    globalShortcut.register('CommandOrControl+Shift+S', async () => {
     try {
       const sources = await (await import('electron')).desktopCapturer.getSources({
         types: ['screen'],
@@ -245,6 +263,17 @@ function registerIPC(): void {
   ipcMain.handle('open-external', (_event, url: string) => {
     shell.openExternal(url)
     return true
+  })
+
+  // Update global hotkey dynamically
+  ipcMain.handle('update-hotkey', (_event, shortcut: string) => {
+    try {
+      registerGlobalShortcuts(shortcut)
+      return true
+    } catch (err) {
+      console.error('Failed to update hotkey:', err)
+      return false
+    }
   })
 
   // Window controls for frameless quick-assist

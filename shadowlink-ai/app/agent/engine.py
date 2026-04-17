@@ -85,7 +85,7 @@ MODE_STRATEGY_OVERRIDES: dict[str, dict[TaskComplexity, AgentStrategy]] = {
 
 # ── Mode-specific tool restrictions ──
 MODE_PREFERRED_TOOLS: dict[str, list[str]] = {
-    "code-dev": ["code_executor", "file_reader", "web_search", "knowledge_search"],
+    "code-dev": ["code_executor", "file_reader", "file_write", "web_search", "knowledge_search"],
     "paper-reading": ["knowledge_search", "web_search", "file_reader"],
     "creative-writing": ["web_search", "knowledge_search"],
     "data-analysis": ["code_executor", "calculator", "knowledge_search", "file_reader"],
@@ -193,12 +193,14 @@ class AgentEngine:
 
         long_term = get_resource("long_term_memory")
         if long_term:
-            ctx = long_term.to_context(query=request.message)
+            # Isolate long-term memory by mode if supported
+            ctx = long_term.to_context(query=request.message, mode_id=request.mode_id)
             context.update(ctx)
 
         episodic = get_resource("episodic_memory")
         if episodic:
-            ctx = episodic.to_context(task=request.message)
+            # Isolate episodic memory by mode if supported
+            ctx = episodic.to_context(task=request.message, mode_id=request.mode_id)
             context.update(ctx)
 
         return context
@@ -254,13 +256,44 @@ class AgentEngine:
             
         return client
 
-    def _inject_resources_to_tools(self, executor: Any, request: AgentRequest):
-        """Inject mode resources into tools like local_search."""
+    def _get_contextualized_tools(self, executor: Any, request: AgentRequest) -> list[Any]:
+        """Return a fresh list of tools cloned and configured for this specific request."""
+        base_tools = getattr(executor, "tools", [])
+        enabled_tools = (request.context or {}).get("enabled_tools")
         resources = (request.context or {}).get("resources", [])
-        if hasattr(executor, "tools"):
-            for tool in executor.tools:
-                if tool.name == "local_search":
-                    tool.context_resources = resources
+        root_dir = (request.context or {}).get("root_directory", "").strip()
+
+        contextualized = []
+        for tool in base_tools:
+            # 1. Filter by enabled tools (always keep local_search if resources exist)
+            if enabled_tools is not None:
+                if tool.name not in enabled_tools and tool.name != "local_search":
+                    continue
+
+            # 2. Clone the tool to avoid cross-request state leakage
+            try:
+                # Use Pydantic's model_copy if it's a ShadowLinkTool
+                new_tool = tool.model_copy()
+            except Exception:
+                # Fallback for standard LangChain tools
+                new_tool = tool
+
+            # 3. Inject mode-specific configuration
+            if new_tool.name == "local_search":
+                setattr(new_tool, "context_resources", resources)
+
+            if root_dir and hasattr(new_tool, "allowed_dirs"):
+                # Strictly restrict to root_dir if provided
+                setattr(new_tool, "allowed_dirs", [root_dir])
+            
+            # For local_search, also add root_dir to search paths implicitly
+            if root_dir and new_tool.name == "local_search":
+                current_res = getattr(new_tool, "context_resources", [])
+                setattr(new_tool, "context_resources", current_res + [{"type": "folder", "value": root_dir}])
+
+            contextualized.append(new_tool)
+
+        return contextualized
 
     async def execute(self, request: AgentRequest) -> AgentResponse:
         """Execute agent task with memory integration."""
@@ -274,8 +307,9 @@ class AgentEngine:
 
         self._record_message(request)
 
-        executor = self._strategy_executors.get(strategy)
-        if executor is None:
+        # 1. Get the template executor
+        template_executor = self._strategy_executors.get(strategy)
+        if template_executor is None:
             return AgentResponse(
                 session_id=request.session_id,
                 answer=f"[{strategy.value}] Strategy not registered.",
@@ -283,20 +317,17 @@ class AgentEngine:
                 steps=[AgentStep(step_type="error", content=f"Strategy {strategy.value} not available")],
             )
 
-        # Inject custom LLM client if configured
+        # 2. Prepare request-specific resources
         llm_client = self._get_llm_client(request)
-        if hasattr(executor, "llm_client"):
-            executor.llm_client = llm_client
-            
-        # Filter tools if enabled_tools is explicitly passed from frontend
-        enabled_tools = (request.context or {}).get("enabled_tools")
-        if enabled_tools is not None and hasattr(executor, "tools"):
-            # Only keep tools that are in the enabled_tools list (and always keep local_search if we have resources)
-            filtered_tools = [t for t in getattr(executor, "tools", []) if t.name in enabled_tools or t.name == "local_search"]
-            executor.tools = filtered_tools
+        tools = self._get_contextualized_tools(template_executor, request)
 
-        # Inject resources into tools
-        self._inject_resources_to_tools(executor, request)
+        # 3. Instantiate a fresh executor for this request to ensure thread-safety and isolation
+        executor_class = template_executor.__class__
+        if strategy == AgentStrategy.DIRECT:
+            executor = executor_class(llm_client=llm_client)
+        else:
+            # REACT, PLAN_EXECUTE, SUPERVISOR all take (llm_client, tools)
+            executor = executor_class(llm_client=llm_client, tools=tools)
 
         start = time.perf_counter()
         response = await executor.execute(request)
@@ -324,8 +355,9 @@ class AgentEngine:
         if memory_context:
             request.context = {**(request.context or {}), "memory": memory_context}
 
-        executor = self._strategy_executors.get(strategy)
-        if executor is None:
+        # 1. Get the template executor
+        template_executor = self._strategy_executors.get(strategy)
+        if template_executor is None:
             yield StreamEvent(
                 event=StreamEventType.THOUGHT,
                 data={"content": f"Routed to {strategy.value} strategy"},
@@ -343,27 +375,27 @@ class AgentEngine:
             )
             return
 
-        # Inject custom LLM client if configured
+        # 2. Prepare request-specific resources
         llm_client = self._get_llm_client(request)
-        if hasattr(executor, "llm_client"):
-            executor.llm_client = llm_client
-            
-        # Filter tools if enabled_tools is explicitly passed from frontend
-        enabled_tools = (request.context or {}).get("enabled_tools")
-        if enabled_tools is not None and hasattr(executor, "tools"):
-            # Only keep tools that are in the enabled_tools list (and always keep local_search if we have resources)
-            filtered_tools = [t for t in getattr(executor, "tools", []) if t.name in enabled_tools or t.name == "local_search"]
-            executor.tools = filtered_tools
+        tools = self._get_contextualized_tools(template_executor, request)
 
-        # Inject resources into tools
-        self._inject_resources_to_tools(executor, request)
+        # 3. Instantiate a fresh executor for this request
+        executor_class = template_executor.__class__
+        if strategy == AgentStrategy.DIRECT:
+            executor = executor_class(llm_client=llm_client)
+        else:
+            executor = executor_class(llm_client=llm_client, tools=tools)
 
         full_answer = ""
         start = time.perf_counter()
+        last_event_time = start
 
         # Execute and yield events directly
         try:
+            # We wrap the iterator to track activity
             async for event in executor.execute_stream(request):
+                last_event_time = time.perf_counter()
+                
                 # Collect answer for memory recording
                 if event.event == StreamEventType.TOKEN:
                     full_answer += event.data.get("content", "")
@@ -440,7 +472,7 @@ class DirectExecutor:
         """Streaming direct LLM call — yields TOKEN events as they arrive."""
         yield StreamEvent(
             event=StreamEventType.THOUGHT,
-            data={"content": "Processing your request..."},
+            data={"content": "Calling LLM for direct answer..."},
             session_id=request.session_id,
         )
 
@@ -449,33 +481,35 @@ class DirectExecutor:
         start = time.perf_counter()
 
         try:
-            async for token in self.llm_client.chat_stream(
+            import asyncio
+            # Use a wrapper for keep-alive
+            it = self.llm_client.chat_stream(
                 message=request.message,
                 system_prompt=self._build_prompt_with_memory(request),
-            ):
-                full_content += token
-                token_count += 1
-                yield StreamEvent(
-                    event=StreamEventType.TOKEN,
-                    data={"content": token},
-                    session_id=request.session_id,
-                )
+            )
+            
+            while True:
+                try:
+                    token = await asyncio.wait_for(it.__anext__(), timeout=5.0)
+                    token_count += 1
+                    full_content += token
+                    yield StreamEvent(
+                        event=StreamEventType.TOKEN,
+                        data={"content": token},
+                        session_id=request.session_id,
+                    )
+                except asyncio.TimeoutError:
+                    yield StreamEvent(
+                        event=StreamEventType.THOUGHT,
+                        data={"content": "LLM is thinking..."},
+                        session_id=request.session_id,
+                    )
+                except StopAsyncIteration:
+                    break
         except Exception as e:
-            await logger.aerror("direct_executor_error", error=str(e))
+            logger.error(f"Direct stream failed: {e}")
             yield StreamEvent(
                 event=StreamEventType.ERROR,
-                data={"content": f"LLM call failed: {e}"},
+                data={"content": f"Direct execution failed: {e}"},
                 session_id=request.session_id,
             )
-            return
-
-        elapsed_ms = (time.perf_counter() - start) * 1000
-        yield StreamEvent(
-            event=StreamEventType.DONE,
-            data={
-                "strategy": AgentStrategy.DIRECT.value,
-                "token_count": token_count,
-                "latency_ms": round(elapsed_ms, 2),
-            },
-            session_id=request.session_id,
-        )

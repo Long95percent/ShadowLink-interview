@@ -31,6 +31,8 @@ interface ChatState {
   setInputDraft: (v: string) => void
   setUseResources: (v: boolean) => void
   clearMessages: () => void
+  /** Reset to a new chat state */
+  resetChat: () => void
 }
 
 export const useChatStore = create<ChatState>()(
@@ -77,5 +79,12 @@ export const useChatStore = create<ChatState>()(
 
     clearMessages: () =>
       set((s) => { s.messages = [] }),
+
+    resetChat: () =>
+      set((s) => {
+        s.activeSessionId = null
+        s.messages = []
+        s.isSending = false
+      }),
   })),
 )

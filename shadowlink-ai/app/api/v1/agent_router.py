@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -48,6 +49,18 @@ async def agent_chat_stream(
 
     async def event_generator():
         agent = engine or AgentEngine()
+        
+        # Immediate heartbeat to verify connection (wrapped in StreamEvent model)
+        yield {
+            "event": "heartbeat",
+            "data": json.dumps({
+                "event": "heartbeat",
+                "data": {"timestamp": int(time.time() * 1000)},
+                "session_id": request.session_id,
+                "timestamp": int(time.time() * 1000)
+            }, ensure_ascii=False),
+        }
+        
         async for event in agent.execute_stream(request):
             yield {
                 "event": event.event.value,

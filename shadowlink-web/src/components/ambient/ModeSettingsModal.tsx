@@ -9,12 +9,14 @@ export function ModeSettingsModal({ modeId, onClose }: { modeId: string; onClose
   const updateModeSystemPrompt = useAmbientStore((s) => s.updateModeSystemPrompt)
   const updateModeStrategy = useAmbientStore((s) => s.updateModeStrategy)
   const updateModeTools = useAmbientStore((s) => s.updateModeTools)
+  const updateModeRootDirectory = useAmbientStore((s) => s.updateModeRootDirectory)
   const mode = modes.find(m => m.modeId === modeId)
 
   const [resources, setResources] = useState<WorkModeResource[]>([])
   const [systemPrompt, setSystemPrompt] = useState<string>('')
   const [strategy, setStrategy] = useState<string>('auto')
   const [enabledTools, setEnabledTools] = useState<string[]>([])
+  const [rootDirectory, setRootDirectory] = useState<string>('')
 
   useEffect(() => {
     if (mode) {
@@ -22,6 +24,7 @@ export function ModeSettingsModal({ modeId, onClose }: { modeId: string; onClose
       setSystemPrompt(mode.systemPrompt || '')
       setStrategy(mode.strategy || 'auto')
       setEnabledTools(mode.enabledTools || [])
+      setRootDirectory(mode.rootDirectory || '')
     }
   }, [mode])
 
@@ -50,6 +53,7 @@ export function ModeSettingsModal({ modeId, onClose }: { modeId: string; onClose
     updateModeSystemPrompt(modeId, systemPrompt)
     updateModeStrategy(modeId, strategy)
     updateModeTools(modeId, enabledTools)
+    updateModeRootDirectory(modeId, rootDirectory)
     onClose()
   }
 
@@ -66,6 +70,7 @@ export function ModeSettingsModal({ modeId, onClose }: { modeId: string; onClose
     { id: 'knowledge_search', label: 'Knowledge Base', desc: 'Search indexed documents & vectors' },
     { id: 'code_executor', label: 'Code Execution', desc: 'Run Python code locally' },
     { id: 'file_reader', label: 'File Reader', desc: 'Read local files' },
+    { id: 'file_write', label: 'File Writer', desc: 'Create or update local files' },
     { id: 'calculator', label: 'Calculator', desc: 'Evaluate math expressions' },
   ]
 
@@ -156,6 +161,26 @@ export function ModeSettingsModal({ modeId, onClose }: { modeId: string; onClose
                 </label>
               ))}
             </div>
+          </div>
+
+          <div className="h-px w-full bg-surface-tertiary" />
+
+          {/* Root Directory Section */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Folder size={14} className="text-primary-400" />
+              Working Directory (Isolation)
+            </h3>
+            <p className="text-xs text-muted leading-relaxed">
+              Restrict the Agent's file operations to this directory for this mode.
+            </p>
+            <input
+              type="text"
+              value={rootDirectory}
+              onChange={(e) => setRootDirectory(e.target.value)}
+              placeholder="e.g., C:\Projects\MyProject"
+              className="w-full bg-surface-secondary border border-surface-tertiary rounded-xl px-3 py-2 text-sm text-foreground placeholder:text-muted/50 focus:outline-none focus:border-primary-500/50 font-mono"
+            />
           </div>
 
           <div className="h-px w-full bg-surface-tertiary" />

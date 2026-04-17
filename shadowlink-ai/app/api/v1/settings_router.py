@@ -79,7 +79,7 @@ PRESETS: list[dict[str, Any]] = [
     },
     {
         "id": "preset-deepseek",
-        "name": "DeepSeek",
+        "name": "DeepSeek (官方)",
         "base_url": "https://api.deepseek.com/v1",
         "model": "deepseek-chat",
         "api_key": "",
@@ -87,8 +87,17 @@ PRESETS: list[dict[str, Any]] = [
         "max_tokens": 4096,
     },
     {
+        "id": "preset-bailian-deepseek",
+        "name": "DeepSeek (阿里百炼)",
+        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "model": "deepseek-v3",
+        "api_key": "",
+        "temperature": 0.7,
+        "max_tokens": 4096,
+    },
+    {
         "id": "preset-dashscope",
-        "name": "通义千问 (DashScope)",
+        "name": "通义千问 (百炼)",
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
         "model": "qwen-turbo",
         "api_key": "",
@@ -176,16 +185,18 @@ class LLMSettingsUpdate(BaseModel):
 async def list_providers() -> Result[dict]:
     """List all configured providers with masked API keys."""
     data = _load_providers()
+    active_id = data.get("active_id")
     safe = []
     for p in data["providers"]:
         entry = {**p}
+        entry["is_active"] = (entry["id"] == active_id)
         key = entry.get("api_key", "")
         entry["api_key_masked"] = (
             f"{key[:6]}...{key[-4:]}" if len(key) > 12 else ("***" if key else "")
         )
         # Don't send raw key in list — send it only in single-get or when editing
         safe.append(entry)
-    return Result.ok(data={"providers": safe, "active_id": data.get("active_id")})
+    return Result.ok(data={"providers": safe, "active_id": active_id})
 
 
 @router.get("/providers/presets")
@@ -272,14 +283,21 @@ async def activate_provider(provider_id: str) -> Result[dict]:
 @router.post("/providers/test")
 async def test_provider(provider: ProviderCreate) -> Result[dict]:
     """Test connectivity to an LLM provider by sending a minimal completion request."""
+    logger.info("testing_provider_connectivity", name=provider.name, base_url=provider.base_url)
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        # Use a fresh client for testing, ignoring system proxies if needed
+        # Or better, allow explicit proxy config if we want to support it.
+        # For now, let's just log more info.
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
             headers: dict[str, str] = {"Content-Type": "application/json"}
             if provider.api_key:
                 headers["Authorization"] = f"Bearer {provider.api_key}"
 
+            # Validate URL format
+            target_url = f"{provider.base_url.rstrip('/')}/chat/completions"
+            
             resp = await client.post(
-                f"{provider.base_url.rstrip('/')}/chat/completions",
+                target_url,
                 headers=headers,
                 json={
                     "model": provider.model,
@@ -287,20 +305,33 @@ async def test_provider(provider: ProviderCreate) -> Result[dict]:
                     "max_tokens": 5,
                 },
             )
+            
             if resp.status_code == 200:
                 return Result.ok(data={"status": "ok", "message": "Connection successful!"})
             else:
-                body = resp.text[:300]
+                try:
+                    error_json = resp.json()
+                    error_msg = error_json.get("error", {}).get("message", resp.text[:100])
+                except:
+                    error_msg = resp.text[:100]
+                
+                logger.warn("provider_test_failed", status=resp.status_code, error=error_msg)
                 return Result.ok(data={
                     "status": "error",
-                    "message": f"HTTP {resp.status_code}: {body}",
+                    "message": f"HTTP {resp.status_code}: {error_msg}",
                 })
-    except httpx.ConnectError:
-        return Result.ok(data={"status": "error", "message": "Connection refused — is the service running?"})
+                
+    except httpx.ConnectError as exc:
+        logger.error("provider_connect_error", error=str(exc))
+        return Result.ok(data={"status": "error", "message": f"Connect Error: {str(exc)}. If using Aliyun, try turning OFF your VPN."})
+    except httpx.ProxyError as exc:
+        logger.error("provider_proxy_error", error=str(exc))
+        return Result.ok(data={"status": "error", "message": f"Proxy Error: {str(exc)}. Check your VPN/Proxy settings."})
     except httpx.TimeoutException:
-        return Result.ok(data={"status": "error", "message": "Connection timed out (15s)"})
+        return Result.ok(data={"status": "error", "message": "Connection timed out (15s). The service might be blocked or down."})
     except Exception as exc:
-        return Result.ok(data={"status": "error", "message": str(exc)})
+        logger.error("provider_test_unexpected_error", error=str(exc), type=type(exc).__name__)
+        return Result.ok(data={"status": "error", "message": f"Unexpected {type(exc).__name__}: {str(exc)}"})
 
 
 # ── Internal helper ──────────────────────────────────────────────

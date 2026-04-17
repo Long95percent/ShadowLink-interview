@@ -16,16 +16,22 @@ export default defineConfig({
       '/api/ai': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        proxyTimeout: 600000, // 10 minutes
+        timeout: 600000,
       },
       // Keep direct access for setting routes that aren't mapped in Java yet
       '/v1': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        proxyTimeout: 600000,
+        timeout: 600000,
       },
       // Other Java backend APIs
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        proxyTimeout: 600000,
+        timeout: 600000,
       },
       '/ws': {
         target: 'http://localhost:8080',

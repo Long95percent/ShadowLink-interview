@@ -103,11 +103,15 @@ class EpisodicMemory:
             self._episodes = self._episodes[-self._max:]
         self._save()
 
-    def recall_similar(self, task: str, limit: int = 5) -> list[Episode]:
+    def recall_similar(self, task: str, mode_id: str | None = None, limit: int = 5) -> list[Episode]:
         """Find episodes with similar tasks. Phase 2+: semantic similarity."""
         task_lower = task.lower()
         scored = []
         for ep in self._episodes:
+            # Filter by mode_id in metadata if provided
+            if mode_id and ep.metadata.get("mode_id") != mode_id:
+                continue
+                
             # Simple keyword overlap score
             overlap = sum(1 for w in task_lower.split() if w in ep.task.lower())
             if overlap > 0:
@@ -127,9 +131,9 @@ class EpisodicMemory:
                 stats[ep.strategy]["failure"] += 1
         return stats
 
-    def to_context(self, task: str) -> dict[str, Any]:
+    def to_context(self, task: str, mode_id: str | None = None) -> dict[str, Any]:
         """Export relevant episodes as context."""
-        similar = self.recall_similar(task, limit=3)
+        similar = self.recall_similar(task, mode_id=mode_id, limit=3)
         if not similar:
             return {}
         return {

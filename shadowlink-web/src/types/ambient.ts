@@ -63,6 +63,7 @@ export interface WorkMode {
   strategy?: string
   enabledTools?: string[]
   resources: WorkModeResource[]
+  rootDirectory?: string
   isBuiltin: boolean
   sortOrder: number
 }

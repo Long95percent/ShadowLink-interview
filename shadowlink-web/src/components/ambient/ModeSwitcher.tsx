@@ -4,7 +4,7 @@
 
 import { useState, MouseEvent } from 'react'
 import { useAmbientStore } from '@/stores'
-import { Settings, Play } from 'lucide-react'
+import { Settings, Play, Plus } from 'lucide-react'
 import { ModeSettingsModal } from './ModeSettingsModal'
 
 export function ModeSwitcher() {
@@ -13,8 +13,19 @@ export function ModeSwitcher() {
   
   const activeModeId = useAmbientStore((s) => s.activeModeId)
   const switchMode = useAmbientStore((s) => s.switchMode)
+  const createMode = useAmbientStore((s) => s.createMode)
   const modes = useAmbientStore((s) => s.modes)
   const active = modes.find((m) => m.modeId === activeModeId) ?? modes[0]
+
+  const handleCreateMode = (e: MouseEvent) => {
+    e.stopPropagation()
+    const name = prompt('Enter mode name:')
+    if (name && name.trim()) {
+      const newModeId = createMode(name.trim())
+      switchMode(newModeId)
+      setOpen(false)
+    }
+  }
 
   const handleGo = async (e: MouseEvent, modeId: string) => {
     e.stopPropagation()
@@ -109,6 +120,17 @@ export function ModeSwitcher() {
                   </div>
                 </div>
               ))}
+              
+              {/* Create New Mode */}
+              <button
+                onClick={handleCreateMode}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-surface-secondary transition-colors border-t border-surface-tertiary text-primary-400 font-medium"
+              >
+                <div className="w-7 h-7 rounded-md bg-primary-500/10 flex items-center justify-center shrink-0">
+                  <Plus size={16} />
+                </div>
+                <span className="text-sm">Create New Mode</span>
+              </button>
             </div>
           </>
         )}

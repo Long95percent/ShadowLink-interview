@@ -10,6 +10,8 @@ import type { StreamEvent, PlanStep } from '@/types'
 
 export function useAgent() {
   const connectionRef = useRef<{ close: () => void } | null>(null)
+  const lastEventTimeRef = useRef<number>(0)
+  const watchdogRef = useRef<number | null>(null)
 
   const startExecution = useAgentStore((s) => s.startExecution)
   const addStep = useAgentStore((s) => s.addStep)
@@ -27,9 +29,17 @@ export function useAgent() {
   const activeLlmId = useSettingsStore((s) => s.activeLlmId)
   const llmConfigs = useSettingsStore((s) => s.llmConfigs)
   const llmConfig = llmConfigs.find(c => c.id === activeLlmId) || llmConfigs[0]
+  const rootDirectory = useSettingsStore((s) => s.rootDirectory)
+
+  const clearWatchdog = useCallback(() => {
+    if (watchdogRef.current) {
+      window.clearInterval(watchdogRef.current)
+      watchdogRef.current = null
+    }
+  }, [])
 
   const execute = useCallback(
-    (sessionId: string, message: string) => {
+    (sessionId: string, message: string, strategyOverride?: AgentStrategy) => {
       // Create assistant placeholder message
       const assistantMsgId = `msg-${Date.now()}`
       addMessage({
@@ -44,7 +54,17 @@ export function useAgent() {
       })
 
       setIsSending(true)
-      startExecution(sessionId, 'react')
+      startExecution(sessionId, strategyOverride || 'react')
+      lastEventTimeRef.current = Date.now()
+
+      // Start a frontend watchdog to alert user if nothing happens
+      clearWatchdog()
+      watchdogRef.current = window.setInterval(() => {
+        const idleTime = Date.now() - lastEventTimeRef.current
+        if (idleTime > 15000) { // 15 seconds
+          setCurrentThought("Still waiting for model response... Check your API key or network connection.")
+        }
+      }, 5000)
 
       const activeMode = useAmbientStore.getState().modes.find(m => m.modeId === activeModeId)
       const useResources = useChatStore.getState().useResources
@@ -52,10 +72,12 @@ export function useAgent() {
       const conn = connectAgentSSE(sessionId, activeModeId, message, llmConfig, {
         resources: useResources ? (activeMode?.resources || []) : [],
         system_prompt: activeMode?.systemPrompt || '',
-        strategy: activeMode?.strategy !== 'auto' ? activeMode?.strategy : undefined,
+        strategy: strategyOverride || (activeMode?.strategy !== 'auto' ? activeMode?.strategy : undefined),
         enabled_tools: activeMode?.enabledTools,
+        root_directory: activeMode?.rootDirectory || rootDirectory,
       }, {
         onEvent: (event: StreamEvent) => {
+          lastEventTimeRef.current = Date.now()
           const { data } = event
 
           switch (event.event) {
@@ -121,11 +143,13 @@ export function useAgent() {
                 tokenCount: (data.token_count as number) ?? (data.total_tokens as number) ?? 0,
                 model: (data.model as string) ?? '',
               })
+              clearWatchdog()
               break
 
             case 'error':
               appendToMessage(assistantMsgId, `\n\n**Error:** ${(data.content as string) ?? (data.message as string) ?? 'Unknown error'}`)
               updateMessage(assistantMsgId, { isStreaming: false })
+              clearWatchdog()
               break
           }
         },
@@ -135,12 +159,14 @@ export function useAgent() {
           updateMessage(assistantMsgId, { isStreaming: false })
           finishExecution()
           setIsSending(false)
+          clearWatchdog()
         },
 
         onClose: () => {
           finishExecution()
           setIsSending(false)
           connectionRef.current = null
+          clearWatchdog()
         },
       })
 
@@ -149,7 +175,7 @@ export function useAgent() {
     [
       activeModeId, addMessage, addStep, appendToMessage, finishExecution,
       setCurrentThought, setIsSending, setPlan, startExecution,
-      updateMessage, updatePlanStep, llmConfig,
+      updateMessage, updatePlanStep, llmConfig, clearWatchdog,
     ],
   )
 

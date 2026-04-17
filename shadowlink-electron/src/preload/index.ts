@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('shadowlink', {
   // ── System ──
   getSystemInfo: (): Promise<Record<string, string>> => ipcRenderer.invoke('get-system-info'),
   openExternal: (url: string): Promise<boolean> => ipcRenderer.invoke('open-external', url),
+  updateHotkey: (shortcut: string): Promise<boolean> => ipcRenderer.invoke('update-hotkey', shortcut),
 
   // ── Window Controls (for frameless quick-assist) ──
   closeWindow: (): Promise<void> => ipcRenderer.invoke('window-close'),
@@ -50,6 +51,7 @@ declare global {
       getSelectedText: () => Promise<string>
       getSystemInfo: () => Promise<Record<string, string>>
       openExternal: (url: string) => Promise<boolean>
+      updateHotkey: (shortcut: string) => Promise<boolean>
       closeWindow: () => Promise<void>
       minimizeWindow: () => Promise<void>
       onClipboardContent: (callback: (text: string) => void) => void

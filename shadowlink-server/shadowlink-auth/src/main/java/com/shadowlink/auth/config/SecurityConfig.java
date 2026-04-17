@@ -33,6 +33,9 @@ public class SecurityConfig {
             "/api/auth/register",
             "/api/auth/refresh",
             "/api/ai/**", // Allow L0/L1 demo AI proxy without auth token
+            "/api/sessions/**", // Allow session CRUD without auth (L0/L1 demo)
+            "/api/sessions", // Allow session list
+            "/api/settings/**", // Allow settings proxy (e.g. connectivity test)
             "/health",
             "/actuator/**",
             "/ws/**",

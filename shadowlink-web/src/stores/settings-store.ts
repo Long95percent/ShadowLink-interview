@@ -14,6 +14,8 @@ interface SettingsState {
   
   language: string
   sidebarCollapsed: boolean
+  rootDirectory: string
+  globalShortcut: string
 
   // Actions
   addLLMConfig: (config: LLMConfig) => void
@@ -22,6 +24,8 @@ interface SettingsState {
   setActiveLlmId: (id: string) => void
   
   setLanguage: (lang: string) => void
+  setRootDirectory: (dir: string) => void
+  setGlobalShortcut: (shortcut: string) => void
   toggleSidebar: () => void
 }
 
@@ -43,6 +47,8 @@ export const useSettingsStore = create<SettingsState>()(
       
       language: 'zh-CN',
       sidebarCollapsed: false,
+      rootDirectory: '', // Empty means default to ./data or project root
+      globalShortcut: 'Alt+Space',
 
       addLLMConfig: (config) =>
         set((s) => ({ llmConfigs: [...s.llmConfigs, config] })),
@@ -66,6 +72,16 @@ export const useSettingsStore = create<SettingsState>()(
 
       setLanguage: (language) => set({ language }),
 
+      setRootDirectory: (rootDirectory) => set({ rootDirectory }),
+
+      setGlobalShortcut: (globalShortcut) => {
+        set({ globalShortcut })
+        // If in Electron, notify the main process
+        if (window.shadowlink?.isElectron) {
+          window.shadowlink.updateHotkey(globalShortcut)
+        }
+      },
+
       toggleSidebar: () =>
         set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
     }),
@@ -75,7 +91,9 @@ export const useSettingsStore = create<SettingsState>()(
         llmConfigs: s.llmConfigs, 
         activeLlmId: s.activeLlmId,
         language: s.language, 
-        sidebarCollapsed: s.sidebarCollapsed 
+        sidebarCollapsed: s.sidebarCollapsed,
+        rootDirectory: s.rootDirectory,
+        globalShortcut: s.globalShortcut
       }),
     },
   ),

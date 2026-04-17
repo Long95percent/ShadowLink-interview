@@ -77,6 +77,16 @@ public class SessionServiceImpl implements SessionService {
         return converter.toMessageVOList(messageMapper.selectList(wrapper));
     }
 
+    @Override
+    @Transactional
+    public void saveMessage(String sessionId, String role, String content) {
+        ChatMessage message = new ChatMessage();
+        message.setSessionId(sessionId);
+        message.setRole(role);
+        message.setContent(content);
+        messageMapper.insert(message);
+    }
+
     private ChatSession findBySessionId(String sessionId) {
         ChatSession session = sessionMapper.selectOne(
                 new LambdaQueryWrapper<ChatSession>()

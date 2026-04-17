@@ -2,40 +2,77 @@
  * ChatPage — main chat workspace with split view: chat panel + agent panel.
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChatPanel } from '@/components/chat'
 import { AgentPanel } from '@/components/agent'
 import { useChatStore, useAmbientStore } from '@/stores'
 import { useAgent } from '@/hooks'
+import { sessionApi } from '@/services'
 import { Activity } from 'lucide-react'
+import type { AgentStrategy } from '@/types'
 
 export function ChatPage() {
   const { execute } = useAgent()
   const activeSessionId = useChatStore((s) => s.activeSessionId)
+  const sessions = useChatStore((s) => s.sessions)
+  const setSessions = useChatStore((s) => s.setSessions)
+  const setActiveSession = useChatStore((s) => s.setActiveSession)
+  const setMessages = useChatStore((s) => s.setMessages)
   const addMessage = useChatStore((s) => s.addMessage)
+  const resetChat = useChatStore((s) => s.resetChat)
   const activeModeId = useAmbientStore((s) => s.activeModeId)
   const [showAgentPanel, setShowAgentPanel] = useState(false)
 
-  const handleSend = useCallback(
-    (message: string) => {
-      const sessionId = activeSessionId ?? `session-${Date.now()}`
+  // Load sessions for the current mode
+  useEffect(() => {
+    if (!activeModeId) return
 
-      // If no active session, set one
-      if (!activeSessionId) {
-        useChatStore.getState().setActiveSession(sessionId)
-        useChatStore.getState().setSessions([
-          ...useChatStore.getState().sessions,
-          {
-            sessionId,
-            modeId: activeModeId,
-            title: message.slice(0, 40),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ])
+    // 1. Reset state for the new mode
+    resetChat()
+
+    // 2. Load sessions for the new mode
+    sessionApi.list(activeModeId).then((loadedSessions) => {
+      setSessions(loadedSessions)
+      
+      // If we have sessions for this mode, pick the latest one
+      if (loadedSessions.length > 0) {
+        setActiveSession(loadedSessions[0].sessionId)
+      }
+    })
+  }, [activeModeId, setSessions, setActiveSession, resetChat])
+
+  // Load messages when active session changes
+  useEffect(() => {
+    if (!activeSessionId) {
+      setMessages([])
+      return
+    }
+
+    sessionApi.getMessages(activeSessionId).then((loadedMessages) => {
+      setMessages(loadedMessages)
+    })
+  }, [activeSessionId, setMessages])
+
+  const handleSend = useCallback(
+    async (message: string, strategy?: AgentStrategy) => {
+      let sessionId = activeSessionId
+
+      // If no active session, create one in the backend
+      if (!sessionId) {
+        try {
+          const newSession = await sessionApi.create(activeModeId, message.slice(0, 40))
+          sessionId = newSession.sessionId
+          setActiveSession(sessionId)
+          setSessions([newSession, ...sessions])
+        } catch (error) {
+          console.error('Failed to create session:', error)
+          // Fallback to local-only if backend fails (though unlikely with L1 setup)
+          sessionId = `session-${Date.now()}`
+          setActiveSession(sessionId)
+        }
       }
 
-      // Add user message
+      // Add user message locally (backend will save it via ProxyController)
       addMessage({
         id: `msg-${Date.now()}-user`,
         sessionId,
@@ -47,10 +84,10 @@ export function ChatPage() {
       })
 
       // Start agent execution
-      execute(sessionId, message)
-      setShowAgentPanel(true) // Auto open panel when agent starts
+      execute(sessionId, message, strategy)
+      setShowAgentPanel(true)
     },
-    [activeSessionId, activeModeId, addMessage, execute],
+    [activeSessionId, activeModeId, sessions, setSessions, setActiveSession, addMessage, execute],
   )
 
   return (

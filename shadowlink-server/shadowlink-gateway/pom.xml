@@ -23,6 +23,10 @@
             <groupId>com.shadowlink</groupId>
             <artifactId>shadowlink-ai-bridge</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.shadowlink</groupId>
+            <artifactId>shadowlink-session</artifactId>
+        </dependency>
         <!-- Resilience4j -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>

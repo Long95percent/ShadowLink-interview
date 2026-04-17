@@ -96,13 +96,17 @@ class LongTermMemory:
             entry.access_count += 1
         return entry
 
-    def search(self, query: str, category: str | None = None, limit: int = 10) -> list[MemoryEntry]:
+    def search(self, query: str, category: str | None = None, mode_id: str | None = None, limit: int = 10) -> list[MemoryEntry]:
         """Simple keyword search over memories. Phase 2+: semantic search."""
         results = []
         query_lower = query.lower()
         for entry in self._memories.values():
             if category and entry.category != category:
                 continue
+            # Filter by mode_id in metadata if provided
+            if mode_id and entry.metadata.get("mode_id") != mode_id:
+                continue
+                
             if query_lower in entry.content.lower() or query_lower in entry.key.lower():
                 results.append(entry)
         return sorted(results, key=lambda e: e.access_count, reverse=True)[:limit]
@@ -115,12 +119,15 @@ class LongTermMemory:
             return True
         return False
 
-    def to_context(self, query: str = "", category: str | None = None) -> dict[str, Any]:
+    def to_context(self, query: str = "", category: str | None = None, mode_id: str | None = None) -> dict[str, Any]:
         """Export relevant memories as context dict for agent state."""
         if query:
-            entries = self.search(query, category=category)
+            entries = self.search(query, category=category, mode_id=mode_id)
         else:
-            entries = sorted(self._memories.values(), key=lambda e: e.last_accessed, reverse=True)[:10]
+            all_entries = list(self._memories.values())
+            if mode_id:
+                all_entries = [e for e in all_entries if e.metadata.get("mode_id") == mode_id]
+            entries = sorted(all_entries, key=lambda e: e.last_accessed, reverse=True)[:10]
 
         if not entries:
             return {}

@@ -23,6 +23,8 @@ interface AmbientState {
   updateModeSystemPrompt: (modeId: string, systemPrompt: string) => void
   updateModeStrategy: (modeId: string, strategy: string) => void
   updateModeTools: (modeId: string, tools: string[]) => void
+  updateModeRootDirectory: (modeId: string, rootDirectory: string) => void
+  createMode: (name: string) => string
   getCurrentTheme: () => AmbientTheme
 }
 
@@ -66,6 +68,31 @@ export const useAmbientStore = create<AmbientState>()(
           m.modeId === modeId ? { ...m, enabledTools: tools } : m
         )
       })),
+
+      updateModeRootDirectory: (modeId, rootDirectory) => set((state) => ({
+        modes: state.modes.map((m) => 
+          m.modeId === modeId ? { ...m, rootDirectory } : m
+        )
+      })),
+
+      createMode: (name) => {
+        const modeId = `mode-${Date.now()}`
+        const newMode: WorkMode = {
+          modeId,
+          name,
+          description: `Custom mode: ${name}`,
+          icon: name.charAt(0).toUpperCase(),
+          themeConfig: getPresetTheme('general'), // Use general as template
+          agentConfig: {},
+          toolsConfig: {},
+          systemPrompt: '',
+          resources: [],
+          isBuiltin: false,
+          sortOrder: get().modes.length,
+        }
+        set((state) => ({ modes: [...state.modes, newMode] }))
+        return modeId
+      },
 
       getCurrentTheme: () => {
         return getPresetTheme(get().activeModeId)

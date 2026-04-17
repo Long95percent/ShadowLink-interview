@@ -19,4 +19,6 @@ public interface SessionService {
     void renameSession(String sessionId, String title);
 
     List<MessageVO> getMessages(String sessionId);
+
+    void saveMessage(String sessionId, String role, String content);
 }

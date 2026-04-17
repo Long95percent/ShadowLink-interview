@@ -63,6 +63,13 @@ export const api = {
     })
   },
 
+  patch<T>(path: string, data?: unknown): Promise<T> {
+    return request<T>(path, {
+      method: 'PATCH',
+      body: data != null ? JSON.stringify(data) : undefined,
+    })
+  },
+
   delete<T>(path: string): Promise<T> {
     return request<T>(path, { method: 'DELETE' })
   },

@@ -3,6 +3,7 @@
  * Reads sidebar width from CSS variables set by the ambient engine.
  */
 
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
@@ -11,6 +12,14 @@ import { useSettingsStore } from '@/stores'
 
 export function AppLayout() {
   const collapsed = useSettingsStore((s) => s.sidebarCollapsed)
+  const globalShortcut = useSettingsStore((s) => s.globalShortcut)
+
+  // Sync hotkey with Electron on mount
+  useEffect(() => {
+    if (window.shadowlink?.isElectron && globalShortcut) {
+      window.shadowlink.updateHotkey(globalShortcut)
+    }
+  }, [globalShortcut])
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-app">

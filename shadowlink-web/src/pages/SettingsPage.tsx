@@ -15,9 +15,14 @@ import {
   Trash2,
   Zap,
   ArrowLeft,
+  Activity,
+  AlertCircle,
+  Loader2,
+  Folder,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useSettingsStore } from '@/stores'
+import { api } from '@/services'
 import type { LLMConfig } from '@/types/agent'
 
 export function SettingsPage() {
@@ -31,11 +36,19 @@ export function SettingsPage() {
   const removeLLMConfig = useSettingsStore((s) => s.removeLLMConfig)
   const setActiveLlmId = useSettingsStore((s) => s.setActiveLlmId)
 
+  const rootDirectory = useSettingsStore((s) => s.rootDirectory)
+  const setRootDirectory = useSettingsStore((s) => s.setRootDirectory)
+  const globalShortcut = useSettingsStore((s) => s.globalShortcut)
+  const setGlobalShortcut = useSettingsStore((s) => s.setGlobalShortcut)
+
   // Currently editing config
   const [editingId, setEditingId] = useState<string | null>(null)
   
   // Local state for the config being edited
   const [form, setForm] = useState<LLMConfig | null>(null)
+
+  // Connectivity test state
+  const [testStatus, setTestStatus] = useState<Record<string, { loading: boolean; result: string | null; error: string | null }>>({})
 
   // When a config is selected to edit
   const startEdit = (id: string) => {
@@ -82,6 +95,40 @@ export function SettingsPage() {
   const handleCancel = () => {
     setEditingId(null)
     setForm(null)
+  }
+
+  // Connectivity test
+  const testConnection = async (config: LLMConfig) => {
+    setTestStatus(prev => ({ ...prev, [config.id]: { loading: true, result: null, error: null } }))
+    
+    try {
+      // Use the existing backend endpoint
+      const result = await api.post<{ status: string; message: string }>('/settings/providers/test', {
+        name: config.name,
+        base_url: config.baseUrl,
+        model: config.model,
+        api_key: config.apiKey,
+        temperature: config.temperature,
+        max_tokens: config.maxTokens
+      })
+
+      if (result.status === 'ok') {
+        setTestStatus(prev => ({ 
+          ...prev, 
+          [config.id]: { loading: false, result: result.message, error: null } 
+        }))
+      } else {
+        setTestStatus(prev => ({ 
+          ...prev, 
+          [config.id]: { loading: false, result: null, error: result.message } 
+        }))
+      }
+    } catch (err: any) {
+      setTestStatus(prev => ({ 
+        ...prev, 
+        [config.id]: { loading: false, result: null, error: err.message || 'Network error' } 
+      }))
+    }
   }
 
   // Delete config
@@ -270,10 +317,41 @@ export function SettingsPage() {
                     </div>
                     
                     <div className="pt-3 border-t border-white/5 mt-4 flex justify-between items-center">
-                       <p className="text-xs text-muted flex items-center gap-1.5">
-                         <Check size={12} className="text-green-400" />
-                         Click Save to apply changes permanently.
-                       </p>
+                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => testConnection(form)}
+                          disabled={testStatus[form.id]?.loading}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                            testStatus[form.id]?.result 
+                              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                              : testStatus[form.id]?.error
+                              ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                              : 'bg-surface-secondary text-muted hover:text-foreground border border-white/5'
+                          }`}
+                        >
+                          {testStatus[form.id]?.loading ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : testStatus[form.id]?.result ? (
+                            <Check size={12} />
+                          ) : testStatus[form.id]?.error ? (
+                            <AlertCircle size={12} />
+                          ) : (
+                            <Activity size={12} />
+                          )}
+                          {testStatus[form.id]?.loading 
+                            ? 'Testing...' 
+                            : testStatus[form.id]?.result 
+                            ? 'Connection OK' 
+                            : testStatus[form.id]?.error 
+                            ? 'Test Failed' 
+                            : 'Test Connection'}
+                        </button>
+                        {testStatus[form.id]?.error && (
+                          <span className="text-[10px] text-red-400 max-w-[200px] truncate" title={testStatus[form.id]?.error!}>
+                            {testStatus[form.id]?.error}
+                          </span>
+                        )}
+                       </div>
                        <button
                          onClick={handleSave}
                          className="px-4 py-1.5 rounded-lg bg-primary-500 text-white text-xs font-medium hover:bg-primary-600 transition-colors"
@@ -288,6 +366,56 @@ export function SettingsPage() {
           })}
         </div>
       </section>
+
+      {/* Environment Settings */}
+      <section className="surface-card p-5 space-y-4">
+        <div className="flex items-center gap-2 mb-1">
+          <Folder size={16} className="text-primary-400" />
+          <h2 className="text-sm font-medium text-foreground">Environment</h2>
+        </div>
+        <label className="block">
+          <span className="text-xs text-muted">Root Directory</span>
+          <p className="text-[10px] text-muted mb-2">Base path for file operations and local search. If empty, defaults to current data folder.</p>
+          <input
+            type="text"
+            value={rootDirectory}
+            onChange={(e) => setRootDirectory(e.target.value)}
+            placeholder="e.g., D:\Projects\MyWorkspace"
+            className="w-full px-3 py-2 rounded-lg bg-surface-secondary text-sm text-foreground border border-white/5 focus:border-primary-500/50 outline-none transition-all"
+          />
+        </label>
+      </section>
+
+      {/* Desktop Integration (Electron Only) */}
+      {window.shadowlink?.isElectron && (
+        <section className="surface-card p-5 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Activity size={16} className="text-primary-400" />
+            <h2 className="text-sm font-medium text-foreground">Desktop Integration</h2>
+          </div>
+          <label className="block">
+            <span className="text-xs text-muted">Global Hotkey (Quick Assist)</span>
+            <p className="text-[10px] text-muted mb-2">
+              The shortcut to show/hide the floating AI bar. Format: Alt+Space, Ctrl+Shift+L, etc.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={globalShortcut}
+                onChange={(e) => setGlobalShortcut(e.target.value)}
+                placeholder="Alt+Space"
+                className="flex-1 px-3 py-2 rounded-lg bg-surface-secondary text-sm text-foreground border border-white/5 focus:border-primary-500/50 outline-none transition-all font-mono"
+              />
+              <button 
+                onClick={() => setGlobalShortcut('Alt+Space')}
+                className="px-3 py-2 rounded-lg bg-white/5 text-xs text-muted hover:text-foreground transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          </label>
+        </section>
+      )}
 
       {/* Preferences */}
       <section className="surface-card p-5 space-y-4">

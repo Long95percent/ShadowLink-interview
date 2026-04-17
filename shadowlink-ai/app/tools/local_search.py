@@ -18,6 +18,9 @@ class LocalSearchTool(ShadowLinkTool):
     )
     args_schema: type[BaseModel] = LocalSearchInput
     category: ToolCategory = ToolCategory.KNOWLEDGE
+    
+    # Injected by the engine
+    context_resources: list = Field(default_factory=list)
 
     def _run(self, query: str, mode_id: str = "general") -> str:
         raise NotImplementedError("Use async version")
