@@ -5,7 +5,7 @@
  * Provider configs are persisted server-side in data/llm_providers.json.
  */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Check,
   ChevronDown,

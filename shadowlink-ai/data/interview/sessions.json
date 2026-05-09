@@ -1,0 +1,38 @@
+[
+  {
+    "session_id": "session-119e24c99312",
+    "space_id": "space-f00ea8fbb23e",
+    "title": "AI Application Engineer 自动面试练习",
+    "mode": "interview_agent",
+    "status": "completed",
+    "created_at": "2026-05-09T09:47:02.047614Z",
+    "updated_at": "2026-05-09T09:47:02.047614Z"
+  },
+  {
+    "session_id": "session-be7d266f67e8",
+    "space_id": "space-f00ea8fbb23e",
+    "title": "AI Application Engineer 面试练习",
+    "mode": "interview_agent",
+    "status": "completed",
+    "created_at": "2026-05-09T09:50:00.760117Z",
+    "updated_at": "2026-05-09T09:50:00.760117Z"
+  },
+  {
+    "session_id": "session-59095e34229b",
+    "space_id": "space-f00ea8fbb23e",
+    "title": "AI Application Engineer 面试练习",
+    "mode": "interview_agent",
+    "status": "completed",
+    "created_at": "2026-05-09T09:50:37.825444Z",
+    "updated_at": "2026-05-09T09:50:37.825444Z"
+  },
+  {
+    "session_id": "session-fef549dd1073",
+    "space_id": "space-f00ea8fbb23e",
+    "title": "AI Application Engineer 面试练习",
+    "mode": "interview_agent",
+    "status": "completed",
+    "created_at": "2026-05-09T12:17:07.602249Z",
+    "updated_at": "2026-05-09T12:17:07.602249Z"
+  }
+]

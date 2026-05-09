@@ -6,7 +6,7 @@
 import { useCallback, useRef } from 'react'
 import { connectAgentSSE } from '@/services'
 import { useAgentStore, useChatStore, useAmbientStore, useSettingsStore } from '@/stores'
-import type { StreamEvent, PlanStep } from '@/types'
+import type { AgentStrategy, StreamEvent, PlanStep } from '@/types'
 
 export function useAgent() {
   const connectionRef = useRef<{ close: () => void } | null>(null)

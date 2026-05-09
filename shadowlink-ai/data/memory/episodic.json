@@ -128,5 +128,57 @@
       "latency_ms": 25303.903999999875
     },
     "timestamp": 1776411547.3255072
+  },
+  {
+    "episode_id": "ep-9f0049e9",
+    "task": "你好，你是哪个模型",
+    "strategy": "direct",
+    "steps": [],
+    "outcome": "你好！我是 ShadowLink AI，一个多功能智能助手，随时为你提供帮助。",
+    "success": true,
+    "metadata": {
+      "mode_id": "general",
+      "latency_ms": 3320.0354000000516
+    },
+    "timestamp": 1778329147.395058
+  },
+  {
+    "episode_id": "ep-af306846",
+    "task": "你觉得deepseek怎么样",
+    "strategy": "direct",
+    "steps": [],
+    "outcome": "",
+    "success": true,
+    "metadata": {
+      "mode_id": "general",
+      "latency_ms": 5004.805899996427
+    },
+    "timestamp": 1778329162.473733
+  },
+  {
+    "episode_id": "ep-0ca989f9",
+    "task": "你好",
+    "strategy": "direct",
+    "steps": [],
+    "outcome": "你好！很高兴再次见到你，有什么我可以帮你的吗？",
+    "success": true,
+    "metadata": {
+      "mode_id": "general",
+      "latency_ms": 3604.118400005973
+    },
+    "timestamp": 1778329215.7104316
+  },
+  {
+    "episode_id": "ep-bdcb27e2",
+    "task": "你是谁，讲讲如何快速学习Agent",
+    "strategy": "direct",
+    "steps": [],
+    "outcome": "你好！我是 ShadowLink AI，一个多功能智能助手。  \n\n关于如何快速学习 Agent（智能体），我建议按以下步骤：  \n\n1. **理解基本概念**  \n   - 先搞清楚什么是 Agent：能够感知环境、自主决策并执行动作的实体。  \n   - 了解关键术语：环境、状态、动作、奖励、策略、价值函数等。  \n\n2. **掌握核心框架**  \n   - 学习强化学习（RL）基础，推荐 S",
+    "success": true,
+    "metadata": {
+      "mode_id": "general",
+      "latency_ms": 23225.59300001012
+    },
+    "timestamp": 1778329254.3455198
   }
 ]

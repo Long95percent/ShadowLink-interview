@@ -41,6 +41,20 @@ export function TopBar() {
       </div>
 
       <div className="flex items-center gap-2">
+        <Link
+          to="/interview"
+          className="px-2 py-1 rounded-md hover:bg-surface-secondary transition-colors text-muted text-sm"
+        >
+          Interview
+        </Link>
+
+        <Link
+          to="/chat"
+          className="px-2 py-1 rounded-md hover:bg-surface-secondary transition-colors text-muted text-sm"
+        >
+          Chat
+        </Link>
+
         {/* Settings gear */}
         <Link
           to="/settings"

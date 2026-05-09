@@ -46,13 +46,16 @@ def create_app() -> FastAPI:
 
 def _register_routers(application: FastAPI) -> None:
     """Register all API routers."""
-    from app.api.v1 import agent_router, file_router, health_router, mcp_router, rag_router, settings_router, system_router
+    from app.api.v1 import agent_router, codebase_router, file_router, health_router, integrations_router, interview_router, mcp_router, rag_router, settings_router, system_router
 
     application.include_router(health_router.router, tags=["health"])
     application.include_router(agent_router.router, prefix="/v1/agent", tags=["agent"])
     application.include_router(rag_router.router, prefix="/v1/rag", tags=["rag"])
     application.include_router(mcp_router.router, prefix="/v1/mcp", tags=["mcp"])
     application.include_router(file_router.router, prefix="/v1/file", tags=["file"])
+    application.include_router(integrations_router.router, prefix="/v1/integrations", tags=["integrations"])
+    application.include_router(interview_router.router, prefix="/v1/interview", tags=["interview"])
+    application.include_router(codebase_router.router, prefix="/v1/codebase", tags=["codebase"])
     application.include_router(settings_router.router, prefix="/v1/settings", tags=["settings"])
     application.include_router(system_router.router, prefix="/v1/system", tags=["system"])
 
