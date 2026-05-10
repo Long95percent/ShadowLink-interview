@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { InterviewParticleField } from '@/components/interview/InterviewParticleField'
 import { getReviewLevel, loadSavedQuestions, makePracticeAttemptId, mergeGeneratedQuestions, saveQuestions, type SavedInterviewQuestion } from '@/components/interview/questionReviewState'
 import { codebaseApi } from '@/services/codebase'
 import { interviewApi } from '@/services/interview'
@@ -339,8 +340,10 @@ ${answer}` : answer
           </div>
         </div>
       ) : (
-        <div className="fixed inset-0 z-40 flex bg-[#080A12] text-foreground">
-          <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="fixed inset-0 z-40 flex overflow-hidden bg-[#080A12] text-foreground">
+          <InterviewParticleField />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_42%),linear-gradient(180deg,rgba(8,10,18,0.18),rgba(8,10,18,0.62))]" />
+          <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
               <div>
                 <div className="text-xs uppercase tracking-[0.25em] text-primary">{detail.space.name}</div>
@@ -381,7 +384,7 @@ ${answer}` : answer
               </div>
             </div>
           </main>
-          <aside className={`h-full border-l border-white/10 bg-surface transition-all duration-300 ${reviewDrawerOpen ? 'w-[420px]' : 'w-0 overflow-hidden'}`}>
+          <aside className={`relative z-10 h-full border-l border-white/10 bg-surface/95 transition-all duration-300 ${reviewDrawerOpen ? 'w-[420px]' : 'w-0 overflow-hidden'}`}>
             <div className="h-full w-[420px] overflow-y-auto p-5">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-lg font-semibold text-foreground">AI 审阅</h3>
