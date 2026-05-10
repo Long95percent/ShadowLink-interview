@@ -47,10 +47,127 @@
   --ambient-bg-effect: gradient_shift;
 }
 
+
+[data-theme="lightness"] {
+  --color-primary-50: 245 233 245;
+  --color-primary-100: 215 217 242;
+  --color-primary-200: 194 186 225;
+  --color-primary-300: 137 182 224;
+  --color-primary-400: 116 178 216;
+  --color-primary-500: 116 178 216;
+  --color-primary-600: 93 158 201;
+  --color-primary-700: 74 132 173;
+  --color-primary-800: 58 104 139;
+  --color-primary-900: 42 77 106;
+
+  --color-bg: #f5e9f5;
+  --color-surface: #fff8ff;
+  --color-surface-secondary: #d7d9f2;
+  --color-surface-tertiary: #c2bae1;
+  --color-text: #273047;
+  --color-text-muted: #5f6f8b;
+  --color-accent: #89b6e0;
+  --color-primary: #74b2d8;
+  --color-primary-light: #89b6e0;
+  --color-primary-dark: #5d9ec9;
+
+  --gradient-from: #89b6e0;
+  --gradient-to: #c2bae1;
+}
+
+
+[data-theme="sunny"] {
+  --color-primary-50: 243 246 243;
+  --color-primary-100: 158 190 237;
+  --color-primary-200: 125 174 245;
+  --color-primary-300: 78 144 245;
+  --color-primary-400: 148 192 0;
+  --color-primary-500: 78 144 245;
+  --color-primary-600: 58 118 215;
+  --color-primary-700: 75 107 3;
+  --color-primary-800: 55 82 2;
+  --color-primary-900: 36 54 1;
+
+  --color-bg: #f3f6f3;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #dfeaf8;
+  --color-surface-tertiary: #9ebeed;
+  --color-text: #253707;
+  --color-text-muted: #4b6b03;
+  --color-accent: #94c000;
+  --color-primary: #4e90f5;
+  --color-primary-light: #9ebeed;
+  --color-primary-dark: #4b6b03;
+
+  --gradient-from: #4e90f5;
+  --gradient-to: #94c000;
+}
+
+[data-theme="lavender"] {
+  --color-primary-50: 241 238 253;
+  --color-primary-100: 218 210 247;
+  --color-primary-200: 186 172 235;
+  --color-primary-300: 184 208 98;
+  --color-primary-400: 95 90 165;
+  --color-primary-500: 95 90 165;
+  --color-primary-600: 76 72 138;
+  --color-primary-700: 94 137 27;
+  --color-primary-800: 65 96 18;
+  --color-primary-900: 40 59 10;
+
+  --color-bg: #f1eefd;
+  --color-surface: #f8f6ff;
+  --color-surface-secondary: #baaceb;
+  --color-surface-tertiary: #b8d062;
+  --color-text: #283b0a;
+  --color-text-muted: #5e891b;
+  --color-accent: #b8d062;
+  --color-primary: #5f5aa5;
+  --color-primary-light: #baaceb;
+  --color-primary-dark: #283b0a;
+
+  --gradient-from: #baaceb;
+  --gradient-to: #b8d062;
+}
+
+[data-theme="eyeCare"] {
+  --color-primary-50: 240 242 239;
+  --color-primary-100: 199 201 201;
+  --color-primary-200: 192 181 142;
+  --color-primary-300: 147 169 137;
+  --color-primary-400: 56 105 57;
+  --color-primary-500: 56 105 57;
+  --color-primary-600: 42 83 44;
+  --color-primary-700: 29 61 31;
+  --color-primary-800: 18 52 27;
+  --color-primary-900: 10 31 16;
+
+  --color-bg: #c7c9c9;
+  --color-surface: #eef0ec;
+  --color-surface-secondary: #c0b58e;
+  --color-surface-tertiary: #93a989;
+  --color-text: #12341b;
+  --color-text-muted: #386939;
+  --color-accent: #93a989;
+  --color-primary: #386939;
+  --color-primary-light: #93a989;
+  --color-primary-dark: #12341b;
+
+  --gradient-from: #93a989;
+  --gradient-to: #386939;
+}
+
 /* ===== Base layer — global resets using CSS vars ===== */
 @layer base {
   html {
     color-scheme: dark;
+  }
+
+  html:has([data-theme="lightness"]),
+  html:has([data-theme="sunny"]),
+  html:has([data-theme="lavender"]),
+  html:has([data-theme="eyeCare"]) {
+    color-scheme: light;
   }
 
   body {

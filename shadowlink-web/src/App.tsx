@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout'
 import { AmbientProvider } from '@/components/ambient'
 import { ChatPage, InterviewLearningPage, KnowledgePage, ReadingPage, SettingsPage } from '@/pages'
+import { useSettingsStore } from '@/stores'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,8 +15,11 @@ const queryClient = new QueryClient({
 })
 
 function App() {
+  const colorTheme = useSettingsStore((state) => state.colorTheme)
+
   return (
-    <QueryClientProvider client={queryClient}>
+    <div data-theme={colorTheme} className="h-screen w-screen">
+      <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AmbientProvider>
           <Routes>
@@ -30,7 +34,8 @@ function App() {
           </Routes>
         </AmbientProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </div>
   )
 }
 

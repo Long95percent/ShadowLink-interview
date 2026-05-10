@@ -350,8 +350,8 @@ ${answer}` : answer
                 <div className="mt-1 text-sm text-muted">第 {questions.length ? activeIndex + 1 : 0} / {questions.length} 题 ? {interviewerSkill}</div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setReviewDrawerOpen((value) => !value)} className="rounded-xl bg-white/10 px-4 py-2 text-sm text-foreground">{reviewDrawerOpen ? '收起审阅' : '打开审阅'}</button>
-                <button onClick={() => setPracticeMode(false)} className="rounded-xl bg-white/10 px-4 py-2 text-sm text-foreground">退出</button>
+                <button onClick={() => setReviewDrawerOpen((value) => !value)} className="rounded-xl bg-white/10 px-4 py-2 text-sm text-white">{reviewDrawerOpen ? '收起审阅' : '打开审阅'}</button>
+                <button onClick={() => setPracticeMode(false)} className="rounded-xl bg-white/10 px-4 py-2 text-sm text-white">退出</button>
               </div>
             </div>
             {message && <div className="mx-auto mt-4 w-full max-w-3xl rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-muted">{message}</div>}

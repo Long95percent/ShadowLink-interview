@@ -28,6 +28,8 @@ import type { LLMConfig } from '@/types/agent'
 export function SettingsPage() {
   const language = useSettingsStore((s) => s.language)
   const setLanguage = useSettingsStore((s) => s.setLanguage)
+  const colorTheme = useSettingsStore((s) => s.colorTheme)
+  const setColorTheme = useSettingsStore((s) => s.setColorTheme)
   
   const activeLlmId = useSettingsStore((s) => s.activeLlmId)
   const llmConfigs = useSettingsStore((s) => s.llmConfigs)
@@ -420,6 +422,21 @@ export function SettingsPage() {
       {/* Preferences */}
       <section className="surface-card p-5 space-y-4">
         <h2 className="text-sm font-medium text-foreground">Preferences</h2>
+        <label className="block">
+          <span className="text-xs text-muted">Color Theme</span>
+          <select
+            value={colorTheme}
+            onChange={(e) => setColorTheme(e.target.value as 'night' | 'lightness' | 'sunny' | 'lavender' | 'eyeCare')}
+            className="mt-1 w-full px-3 py-2 rounded-lg bg-surface-secondary text-sm text-foreground border border-white/5 focus:border-primary-500/50 outline-none"
+          >
+            <option value="night">夜晚模式</option>
+            <option value="lightness">轻盈</option>
+            <option value="sunny">晴天</option>
+            <option value="lavender">薰衣草花园</option>
+            <option value="eyeCare">护眼</option>
+          </select>
+        </label>
+
         <label className="block">
           <span className="text-xs text-muted">Language</span>
           <select

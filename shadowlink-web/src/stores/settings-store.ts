@@ -6,6 +6,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { LLMConfig } from '@/types/agent'
 
+export type ColorTheme = 'night' | 'lightness' | 'sunny' | 'lavender' | 'eyeCare'
+
 interface SettingsState {
   // Current active LLM config ID
   activeLlmId: string
@@ -16,6 +18,7 @@ interface SettingsState {
   sidebarCollapsed: boolean
   rootDirectory: string
   globalShortcut: string
+  colorTheme: ColorTheme
 
   // Actions
   addLLMConfig: (config: LLMConfig) => void
@@ -26,6 +29,7 @@ interface SettingsState {
   setLanguage: (lang: string) => void
   setRootDirectory: (dir: string) => void
   setGlobalShortcut: (shortcut: string) => void
+  setColorTheme: (theme: ColorTheme) => void
   toggleSidebar: () => void
 }
 
@@ -49,6 +53,7 @@ export const useSettingsStore = create<SettingsState>()(
       sidebarCollapsed: false,
       rootDirectory: '', // Empty means default to ./data or project root
       globalShortcut: 'Alt+Space',
+      colorTheme: 'night',
 
       addLLMConfig: (config) =>
         set((s) => ({ llmConfigs: [...s.llmConfigs, config] })),
@@ -82,6 +87,8 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
 
+      setColorTheme: (colorTheme) => set({ colorTheme }),
+
       toggleSidebar: () =>
         set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
     }),
@@ -93,7 +100,8 @@ export const useSettingsStore = create<SettingsState>()(
         language: s.language, 
         sidebarCollapsed: s.sidebarCollapsed,
         rootDirectory: s.rootDirectory,
-        globalShortcut: s.globalShortcut
+        globalShortcut: s.globalShortcut,
+        colorTheme: s.colorTheme
       }),
     },
   ),
