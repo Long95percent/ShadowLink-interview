@@ -12,12 +12,12 @@ from app.config import settings
 from app.codebase.repository import CodebaseRepository
 from app.core.dependencies import get_resource
 from app.interview.external_runner import ExternalAgentRunExecutor
-from app.interview.models import ExternalAgentRun, InterviewReview, InterviewSession, InterviewSkill, ReadingProgress, SpaceProfile
+from app.interview.models import ExternalAgentRun, InterviewReview, InterviewSession, InterviewSkill, ProjectDocument, ReadingProgress, SpaceProfile
 from app.interview.reading import SentenceExplanation, explain_sentence, split_reading_sentences
 from app.interview.repository import InterviewRepository
 from app.file_processing.pipeline import FileProcessingPipeline
 from app.interview.review_service import InterviewQuestionService, InterviewReviewDraftService
-from app.interview.schemas import CreateExternalAgentRunRequest, CreateReviewRequest, CreateSessionRequest, CreateSpaceRequest, ExplainSentenceRequest, GenerateInterviewQuestionsRequest, GenerateInterviewQuestionsResponse, ParsedResumeResponse, SplitReadingRequest, SplitReadingResponse, UpdateProfileRequest, UpdateReadingProgressRequest, UpdateReviewStatusRequest, UpsertInterviewSkillRequest, UploadInterviewSkillResponse, SpaceDetail
+from app.interview.schemas import CreateExternalAgentRunRequest, CreateReviewRequest, CreateSessionRequest, CreateSpaceRequest, ExplainSentenceRequest, GenerateInterviewQuestionsRequest, GenerateInterviewQuestionsResponse, ParsedResumeResponse, SplitReadingRequest, SplitReadingResponse, UpdateProfileRequest, UpdateReadingProgressRequest, UpdateReviewStatusRequest, UpdateSpaceRequest, UpsertInterviewSkillRequest, UploadInterviewSkillResponse, UploadProjectDocumentResponse, SpaceDetail
 from app.llm.client import LLMClient
 from app.llm.providers.openai import OpenAIProvider
 from app.models.common import Result
@@ -39,6 +39,17 @@ def get_codebase_context(repo_id: str | None) -> str:
         return ""
     doc = get_codebase_repo().get_doc(repo_id)
     return doc.raw_markdown if doc else ""
+
+
+def build_reference_context(repo: InterviewRepository, space_id: str, codebase_repo_id: str | None) -> str:
+    chunks = []
+    project_docs_context = repo.build_project_documents_context(space_id)
+    if project_docs_context.strip():
+        chunks.append(f"# Uploaded project documents\n{project_docs_context}")
+    codebase_context = get_codebase_context(codebase_repo_id)
+    if codebase_context.strip():
+        chunks.append(f"# Codebase technical profile\n{codebase_context}")
+    return "\n\n".join(chunks)
 
 
 def ensure_space_exists(repo: InterviewRepository, space_id: str) -> None:
@@ -74,6 +85,23 @@ def parse_skill_payload(text: str, fallback_name: str) -> InterviewSkill:
     return InterviewSkill(skill_id=skill_id, name=name, description=description, instruction=instruction, source="custom")
 
 
+async def parse_uploaded_resume(file: UploadFile, upload_scope: str) -> ParsedResumeResponse:
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in {".pdf", ".docx", ".txt", ".md"}:
+        raise HTTPException(status_code=400, detail="Only PDF, DOCX, TXT, and Markdown resumes are supported")
+
+    upload_dir = Path(settings.data_dir) / "interview" / "uploads" / upload_scope
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = Path(file.filename or f"resume{suffix}").name
+    target = upload_dir / safe_name
+    target.write_bytes(await file.read())
+
+    parsed = await FileProcessingPipeline().process(FileProcessingRequest(file_path=str(target)))
+    if parsed.content.startswith("Error:"):
+        raise HTTPException(status_code=400, detail=parsed.content)
+    return ParsedResumeResponse(filename=safe_name, content=parsed.content.strip())
+
+
 def build_request_llm_client(llm_config: dict | None):
     if not llm_config:
         return get_resource("llm_client")
@@ -100,6 +128,21 @@ async def create_space(request: CreateSpaceRequest) -> Result[SpaceDetail]:
     repo = get_repo()
     space = repo.create_space(request.name, request.type.value, request.theme)
     return Result.ok(data=SpaceDetail(space=space, profile=repo.get_profile(space.space_id)))
+
+
+@router.put("/spaces/{space_id}")
+async def update_space(space_id: str, request: UpdateSpaceRequest) -> Result[SpaceDetail]:
+    repo = get_repo()
+    ensure_space_exists(repo, space_id)
+    space = repo.update_space(space_id, request.name, request.type.value, request.theme)
+    return Result.ok(data=SpaceDetail(space=space, profile=repo.get_profile(space_id)))
+
+
+@router.delete("/spaces/{space_id}")
+async def delete_space(space_id: str) -> Result[dict[str, bool]]:
+    repo = get_repo()
+    ensure_space_exists(repo, space_id)
+    return Result.ok(data={"deleted": repo.delete_space(space_id)})
 
 
 @router.put("/spaces/{space_id}/profile")
@@ -158,20 +201,45 @@ async def upload_interview_skill(file: UploadFile = File(...)) -> Result[UploadI
 async def parse_resume_file(space_id: str, file: UploadFile = File(...)) -> Result[ParsedResumeResponse]:
     repo = get_repo()
     ensure_space_exists(repo, space_id)
+    return Result.ok(data=await parse_uploaded_resume(file, space_id))
+
+
+@router.post("/profile/resume/parse")
+async def parse_resume_draft_file(file: UploadFile = File(...)) -> Result[ParsedResumeResponse]:
+    return Result.ok(data=await parse_uploaded_resume(file, "_draft"))
+
+
+@router.get("/spaces/{space_id}/project-documents")
+async def list_project_documents(space_id: str) -> Result[list[ProjectDocument]]:
+    repo = get_repo()
+    ensure_space_exists(repo, space_id)
+    return Result.ok(data=repo.list_project_documents(space_id))
+
+
+@router.post("/spaces/{space_id}/project-documents/upload")
+async def upload_project_document(space_id: str, file: UploadFile = File(...)) -> Result[UploadProjectDocumentResponse]:
+    repo = get_repo()
+    ensure_space_exists(repo, space_id)
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in {".pdf", ".docx", ".txt", ".md"}:
-        raise HTTPException(status_code=400, detail="Only PDF, DOCX, TXT, and Markdown resumes are supported")
+        raise HTTPException(status_code=400, detail="Only PDF, DOCX, TXT, and Markdown project documents are supported")
 
-    upload_dir = Path(settings.data_dir) / "interview" / "uploads" / space_id
+    upload_dir = Path(settings.data_dir) / "interview" / "project_documents" / space_id
     upload_dir.mkdir(parents=True, exist_ok=True)
-    safe_name = Path(file.filename or f"resume{suffix}").name
+    safe_name = Path(file.filename or f"project-document{suffix}").name
     target = upload_dir / safe_name
     target.write_bytes(await file.read())
 
     parsed = await FileProcessingPipeline().process(FileProcessingRequest(file_path=str(target)))
     if parsed.content.startswith("Error:"):
         raise HTTPException(status_code=400, detail=parsed.content)
-    return Result.ok(data=ParsedResumeResponse(filename=safe_name, content=parsed.content.strip()))
+    document = repo.add_project_document(space_id, safe_name, parsed.content.strip())
+    return Result.ok(data=UploadProjectDocumentResponse(document=document))
+
+
+@router.delete("/project-documents/{document_id}")
+async def delete_project_document(document_id: str) -> Result[dict[str, bool]]:
+    return Result.ok(data={"deleted": get_repo().delete_project_document(document_id)})
 
 
 @router.post("/spaces/{space_id}/interview/questions")
@@ -189,7 +257,6 @@ async def generate_interview_questions(
         interviewer_skill=request.interviewer_skill,
         custom_skill=repo.get_interview_skill(request.interviewer_skill),
         llm_client=llm_client,
-        codebase_context=get_codebase_context(request.codebase_repo_id),
     )
     return Result.ok(data=GenerateInterviewQuestionsResponse(questions=questions, provider=provider, message=message))
 
@@ -227,7 +294,8 @@ async def create_review(space_id: str, session_id: str, request: CreateReviewReq
         llm_client=build_request_llm_client(request.llm_config),
         interviewer_skill=request.interviewer_skill,
         custom_skill=repo.get_interview_skill(request.interviewer_skill),
-        codebase_context=get_codebase_context(request.codebase_repo_id),
+        codebase_context=build_reference_context(repo, space_id, request.codebase_repo_id),
+        revision_instruction=request.revision_instruction,
     )
     suggested_answer = request.suggested_answer or draft.suggested_answer
     critique = request.critique or draft.critique

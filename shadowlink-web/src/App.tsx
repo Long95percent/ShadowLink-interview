@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppLayout } from '@/components/layout'
 import { AmbientProvider } from '@/components/ambient'
-import { ChatPage, InterviewLearningPage, KnowledgePage, SettingsPage } from '@/pages'
+import { ChatPage, InterviewLearningPage, KnowledgePage, ReadingPage, SettingsPage } from '@/pages'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,6 +23,7 @@ function App() {
               <Route index element={<ChatPage />} />
               <Route path="chat" element={<ChatPage />} />
               <Route path="interview" element={<InterviewLearningPage />} />
+              <Route path="reading" element={<ReadingPage />} />
               <Route path="knowledge" element={<KnowledgePage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>

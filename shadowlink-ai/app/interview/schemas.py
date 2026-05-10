@@ -4,10 +4,16 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.interview.models import ExternalAgentRun, InterviewReview, InterviewSession, InterviewSkill, JobSpace, ReadingProgress, ReviewStatus, SessionMode, SpaceProfile, SpaceType, TaskStatus
+from app.interview.models import ExternalAgentRun, InterviewReview, InterviewSession, InterviewSkill, JobSpace, ProjectDocument, ReadingProgress, ReviewStatus, SessionMode, SpaceProfile, SpaceType, TaskStatus
 
 
 class CreateSpaceRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    type: SpaceType = SpaceType.CUSTOM
+    theme: str = "general"
+
+
+class UpdateSpaceRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     type: SpaceType = SpaceType.CUSTOM
     theme: str = "general"
@@ -36,6 +42,10 @@ class UploadInterviewSkillResponse(BaseModel):
     skill: InterviewSkill
 
 
+class UploadProjectDocumentResponse(BaseModel):
+    document: ProjectDocument
+
+
 class SpaceDetail(BaseModel):
     space: JobSpace
     profile: SpaceProfile
@@ -59,6 +69,7 @@ class CreateReviewRequest(BaseModel):
     original_answer: str = Field(min_length=1)
     suggested_answer: str = ""
     critique: str = ""
+    revision_instruction: str = Field(default="", max_length=2000)
     reviewer_provider: str | None = None
     repo_path: str | None = None
     interviewer_skill: str = Field(default="technical_interviewer", max_length=50)

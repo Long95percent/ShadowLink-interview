@@ -51,6 +51,17 @@ dist/
 *.sqlite3
 chat_history.db
 .shadowlink_cache/
+data/memory/*.json
+shadowlink-ai/data/**/*.json
+shadowlink-ai/data/interview/uploads/
+shadowlink-ai/data/interview/project_documents/
+shadowlink-ai/.pytest-tmp/
+
+# Keep empty runtime-data placeholders and examples trackable
+!shadowlink-ai/data/.gitkeep
+!shadowlink-ai/data/interview/.gitkeep
+!shadowlink-ai/data/memory/.gitkeep
+!shadowlink-ai/data/llm_providers.example.json
 
 # AI models, indexes, and local model runtimes
 models/

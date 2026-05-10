@@ -1,4 +1,5 @@
 export { ChatPage } from './ChatPage'
 export { InterviewLearningPage } from './InterviewLearningPage'
+export { ReadingPage } from './ReadingPage'
 export { KnowledgePage } from './KnowledgePage'
 export { SettingsPage } from './SettingsPage'

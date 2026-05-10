@@ -47,7 +47,7 @@ class CapturingOpenAIProvider:
 
     async def chat(self, message: str, *, model=None, system_prompt=None, temperature=None, max_tokens=None):
         CapturingOpenAIProvider.messages.append(message)
-        if "审阅候选人的面试回答" in message:
+        if "Candidate answer:" in message:
             return '{"critique":"回答有项目证据，但需要补充量化指标。","suggested_answer":"建议用 STAR 结构重写回答。"}'
         return '{"questions":[{"question":"请求级配置题目","focus":"配置覆盖","answer_hint":"使用前端传入的配置。"}]}'
 
@@ -89,6 +89,27 @@ async def test_update_profile_requires_existing_space(monkeypatch):
                 "jd_text": "jd",
             })
             assert response.status_code == 404
+    finally:
+        shutil.rmtree(data_dir, ignore_errors=True)
+
+
+@pytest.mark.anyio
+async def test_parse_resume_draft_without_existing_space(monkeypatch):
+    data_dir = Path(".test-data") / f"interview-api-{uuid.uuid4().hex}"
+    monkeypatch.setattr(interview_router.settings, "data_dir", str(data_dir))
+
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/v1/interview/profile/resume/parse",
+                files={"file": ("resume.txt", b"ShadowLink RAG Agent resume", "text/plain")},
+            )
+
+            assert response.status_code == 200
+            payload = response.json()["data"]
+            assert payload["filename"] == "resume.txt"
+            assert "ShadowLink RAG Agent resume" in payload["content"]
     finally:
         shutil.rmtree(data_dir, ignore_errors=True)
 
@@ -249,7 +270,7 @@ async def test_generate_interview_questions_uses_request_llm_config(monkeypatch)
 
 
 @pytest.mark.anyio
-async def test_generate_interview_questions_includes_codebase_doc(monkeypatch):
+async def test_generate_interview_questions_excludes_codebase_doc(monkeypatch):
     data_dir = Path(".test-data") / f"interview-api-{uuid.uuid4().hex}"
     codebase_dir = Path(".test-data") / f"codebase-api-{uuid.uuid4().hex}"
     monkeypatch.setattr(interview_router, "get_repo", lambda: InterviewRepository(data_dir))
@@ -275,7 +296,7 @@ async def test_generate_interview_questions_includes_codebase_doc(monkeypatch):
             })
 
             assert response.status_code == 200
-            assert any("ShadowLink 技术档案" in message for message in CapturingOpenAIProvider.messages)
+            assert not any("ShadowLink 技术档案" in message for message in CapturingOpenAIProvider.messages)
     finally:
         shutil.rmtree(data_dir, ignore_errors=True)
         shutil.rmtree(codebase_dir, ignore_errors=True)
@@ -397,7 +418,7 @@ async def test_parse_resume_txt_file(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_create_review_without_llm_config_falls_back_locally(monkeypatch):
+async def test_create_review_without_llm_config_returns_error(monkeypatch):
     data_dir = Path(".test-data") / f"interview-api-{uuid.uuid4().hex}"
     monkeypatch.setattr(interview_router, "get_repo", lambda: InterviewRepository(data_dir))
 
@@ -414,11 +435,8 @@ async def test_create_review_without_llm_config_falls_back_locally(monkeypatch):
                 json={"original_answer": "answer", "reviewer_provider": "external_llm"},
             )
 
-            assert response.status_code == 200
-            review = response.json()["data"]
-            assert review["original_answer"] == "answer"
-            assert "请先补充 Resume 和 JD" in review["critique"]
-            assert review["token_usage"]["provider"] == "local_fallback"
+            assert response.status_code == 500
+            assert "LLM reviewer is not configured" in response.text
     finally:
         shutil.rmtree(data_dir, ignore_errors=True)
 

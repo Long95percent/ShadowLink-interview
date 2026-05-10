@@ -73,6 +73,14 @@ export interface ParsedResumeResponse {
   content: string
 }
 
+export interface ProjectDocument {
+  document_id: string
+  space_id: string
+  filename: string
+  content: string
+  created_at: string
+}
+
 export interface ExternalAgentRun {
   run_id: string
   space_id: string

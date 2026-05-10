@@ -73,6 +73,14 @@ class SpaceProfile(BaseModel):
     updated_at: datetime = Field(default_factory=utc_now)
 
 
+class ProjectDocument(BaseModel):
+    document_id: str
+    space_id: str
+    filename: str
+    content: str = ""
+    created_at: datetime = Field(default_factory=utc_now)
+
+
 class InterviewSession(BaseModel):
     session_id: str
     space_id: str

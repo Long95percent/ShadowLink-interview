@@ -6,7 +6,7 @@ import json
 import uuid
 from pathlib import Path
 
-from app.interview.models import ExternalAgentRun, InterviewReview, InterviewSession, InterviewSkill, JobSpace, ReadingProgress, ReviewStatus, SpaceProfile, TaskStatus, utc_now
+from app.interview.models import ExternalAgentRun, InterviewReview, InterviewSession, InterviewSkill, JobSpace, ProjectDocument, ReadingProgress, ReviewStatus, SpaceProfile, TaskStatus, utc_now
 
 
 class InterviewRepository:
@@ -19,6 +19,7 @@ class InterviewRepository:
         self.profiles_file = self.data_dir / "profiles.json"
         self.sessions_file = self.data_dir / "sessions.json"
         self.reviews_file = self.data_dir / "reviews.json"
+        self.project_documents_file = self.data_dir / "project_documents.json"
         self.external_runs_file = self.data_dir / "external_agent_runs.json"
         self.reading_progress_file = self.data_dir / "reading_progress.json"
         self.skills_file = self.data_dir / "interview_skills.json"
@@ -44,6 +45,32 @@ class InterviewRepository:
 
     def list_spaces(self) -> list[JobSpace]:
         return [JobSpace(**row) for row in self._load_list(self.spaces_file)]
+
+    def update_space(self, space_id: str, name: str, type: str, theme: str) -> JobSpace:
+        spaces = self._load_list(self.spaces_file)
+        for row in spaces:
+            if row["space_id"] == space_id:
+                row["name"] = name
+                row["type"] = type
+                row["theme"] = theme
+                row["updated_at"] = utc_now().isoformat()
+                self._save_list(self.spaces_file, spaces)
+                return JobSpace(**row)
+        raise KeyError(f"Space not found: {space_id}")
+
+    def delete_space(self, space_id: str) -> bool:
+        spaces = self._load_list(self.spaces_file)
+        next_spaces = [row for row in spaces if row["space_id"] != space_id]
+        if len(next_spaces) == len(spaces):
+            return False
+        self._save_list(self.spaces_file, next_spaces)
+        self._save_list(self.profiles_file, [row for row in self._load_list(self.profiles_file) if row["space_id"] != space_id])
+        self._save_list(self.sessions_file, [row for row in self._load_list(self.sessions_file) if row["space_id"] != space_id])
+        self._save_list(self.reviews_file, [row for row in self._load_list(self.reviews_file) if row["space_id"] != space_id])
+        self._save_list(self.project_documents_file, [row for row in self._load_list(self.project_documents_file) if row["space_id"] != space_id])
+        self._save_list(self.external_runs_file, [row for row in self._load_list(self.external_runs_file) if row["space_id"] != space_id])
+        self._save_list(self.reading_progress_file, [row for row in self._load_list(self.reading_progress_file) if row["space_id"] != space_id])
+        return True
 
     def get_profile(self, space_id: str) -> SpaceProfile:
         for row in self._load_list(self.profiles_file):
@@ -82,6 +109,46 @@ class InterviewRepository:
         next_rows = [row for row in rows if row["skill_id"] != skill_id]
         self._save_list(self.skills_file, next_rows)
         return len(next_rows) != len(rows)
+
+    def list_project_documents(self, space_id: str) -> list[ProjectDocument]:
+        return [ProjectDocument(**row) for row in self._load_list(self.project_documents_file) if row["space_id"] == space_id]
+
+    def add_project_document(self, space_id: str, filename: str, content: str) -> ProjectDocument:
+        document = ProjectDocument(
+            document_id=f"doc-{uuid.uuid4().hex[:12]}",
+            space_id=space_id,
+            filename=filename,
+            content=content,
+        )
+        rows = self._load_list(self.project_documents_file)
+        rows.append(document.model_dump(mode="json"))
+        self._save_list(self.project_documents_file, rows)
+        return document
+
+    def delete_project_document(self, document_id: str) -> bool:
+        rows = self._load_list(self.project_documents_file)
+        next_rows = [row for row in rows if row["document_id"] != document_id]
+        self._save_list(self.project_documents_file, next_rows)
+        return len(next_rows) != len(rows)
+
+    def build_project_documents_context(self, space_id: str, limit: int = 12000) -> str:
+        docs = self.list_project_documents(space_id)
+        if not docs:
+            return ""
+        chunks: list[str] = []
+        remaining = limit
+        for doc in docs:
+            if remaining <= 0:
+                break
+            content = doc.content.strip()
+            if not content:
+                continue
+            header = f"## {doc.filename}\n"
+            available = max(0, remaining - len(header))
+            snippet = content[:available]
+            chunks.append(header + snippet)
+            remaining -= len(header) + len(snippet)
+        return "\n\n".join(chunks)
 
     def create_session(self, space_id: str, title: str) -> InterviewSession:
         session = InterviewSession(session_id=f"session-{uuid.uuid4().hex[:12]}", space_id=space_id, title=title)

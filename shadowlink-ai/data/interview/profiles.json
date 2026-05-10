@@ -1,11 +1,11 @@
 [
   {
-    "space_id": "space-f00ea8fbb23e",
-    "resume_text": "校园经历 \n2023.09-2027.06                           南京邮电大学                      信息安全（本科） \n主修课程：python、C 语言、C++、数据库系统基础、线性代数、离散数学、高等数学、数据结构、概率论与数\n理统计、算法分析与设计等 \n英语能力：CET-6 分数561，可快速阅读英文技术文献与行业博客，具备良好听说读写能力 \n证书：全国计算机二级考试（C++） \n全国大学生电子商务 “三创” 挑战赛 获得校二等奖 \n \n个人简历 \n姓    名 ：隆诗琪  \n民    族 ：汉 \n \n电    话 ：17366125932  \n邮    箱：shiqilong182@163.com  \n出生年月：2005.06 \n \n所在院校 ：南京邮电大学 \n \n学    历 ：本科 \n基本信息 \n项目经历 \n专业技能 \n多Agent 与推理框架：熟练掌握Agent Routing、ReAct、Plan-and-Execute 与Multi-Agent 协作机制，具备复杂\n任务拆解与动态推理流程设计能力。 \nRAG 与知识增强系统：掌握RAG 完整链路（向量检索、语义切片、Embedding、引用回传），能够构建私域知识库并\n实现高精度语义检索与可追溯生成。 \n会话记忆与工具调度：熟悉Session Memory 与Tool Calling 机制，具备基于MySQL 实现多轮对话持久化与工具统\n一注册调度能力。 \n数据处理与Prompt 工程：熟悉Prompt Engineering 与数据预处理流程，具备数据清洗、噪声控制能力。 \n熟练使用AI 工具：熟练使用Claude Code,Cursor,Trae,Codex cli 等AI 工具辅助开发，效率高且架构思维清晰 \nJarvis Life 多智能体系统｜Python/Java Agent 开发 \n技术栈：Python（FastAPI/asyncio/LangGraph）、Java（Gateway）、SQLite、SSE \n \n多智能体执行架构设计与落地：构建 ToolRegistry + tool_runtime + whitelist + intent_router，实现 6 个 \nAgent 的 Tool Calling 与权限隔离，将系统从“对话型”升级为“可执行型 Agent”。 \n多 Agent 协同机制（consultation）与角色主权回复策略：解决跨领域任务路由失真问题，在协作效率与安全\n边界之间实现工程化平衡。 \nMaxwell 日程秘书 Agent 链路：从自然语言意图识别、上下文补全、工具调用，到长期计划拆解、日程写入、\n待确认卡片、前端CalendarPanel 展示闭环。 \n构建长期记忆与偏好学习链路：边界化召回 + 后台异步抽取/压缩，并将主动消息从内存队列升级为持久化机制，\n提升多端一致性与系统稳定性。 \n打通 Frontend -> Java Gateway -> Python AI 统一调用链路并持续做稳定性治理：完成 Jarvis 单元聚合 \n209 passed、API 集成 18 passed、圆桌完整回归 71 passed。 \n \n轻舟舆情｜基于 Multimodal Fusion、External Retrieva 的谣言识别平台 \n \nLLM 数据预处理流水线：基于 Prompt Engineering+API 调用 对社交媒体文本进行清洗、筛选与结构化建模，\n降低噪声数据比例并提升数据质量。 \n外部证据增强系统：基于Google Vision API+反向图像检索构建跨模态证据补充机制，解决单条内容难以验证\n真伪的问题。 \n多模态融合检测模型：基于BERT+Swin Transformer+OCR+Scene Graph+SGAT 构建多模态表示学习框架，\n引入模态质量评估与核心模态引导的渐进融合机制，显著提升在噪声与模态不均衡场景下的检测鲁棒性与可解释\n性。 \n模型服务与可视化平台：基于FastAPI+Django+MySQL+Vue3+ECharts 将检测模型封装为可调用服务并构\n建可视化分析界面，实现算法能力工程化落地与业务侧可用性提升。 \nFastAPI + Django + MySQL + Vue3 + ECharts：将模型能力封装为可调用API，并搭建可视化检测平台。\n解决算法能力难以落地、结果不便于业务使用的问题。 \n \n个人优势 \n具备快速学习与技术迁移能力，能够在复杂系统中持续迭代并推动落地。并且责任心强，性格稳定，善于拆解问\n题并闭环解决。具备良好的多人合作能力和经验，善于和他人合作解决高复杂度问题。",
-    "jd_text": "本研究方向探索如何使AI系统获得持久记忆与持续学习能力，从根本上改变人机交互的本质。当前AI模型通常缺乏跨会话的记忆保持和经验积累，难以形成对用户的深度理解。我们致力于构建能够记住互动历史、理解个人背景并随时间成长的AI系统，使其不仅能回忆与特定用户的共同经历，还能从这些经历中学习并适应。\n\n研究将关注记忆形成与提取的认知机制、个性化交互模式的动态调整，以及知识持续更新而不遗忘核心能力的平衡策略。这一方向的突破将推动AI从单一功能工具向能够建立长期关系的智能伙伴转变，为未来AI系统打开全新的应用场景和交互范式，使人机协作更加自然、高效且个性化。\n任职资格\n1、不限年级，本科及以上在读，计算机/人工智能/软件工程等相关专业优先；\n2、优秀的代码能力、数据结构和基础算法功底，熟悉Python等至少一门编程语言；\n3、熟悉大模型领域相关研究工作和算法，有大模型研发基础；\n4、在ICML/CVPR/NeurIPS/ACL等顶级期刊会议上发表论文者优先；\n5、良好的沟通协作能力，责任心强，积极主动，能和团队一起探索新技术，推进技术进步。",
-    "target_company": "小红书",
-    "target_role": "Dots-【Ace顶尖实习生】AI 长期记忆机制、个性化与终身学习研究",
-    "notes": "智能体上下文，以及长期记忆",
-    "updated_at": "2026-05-09T09:39:55.022668Z"
+    "space_id": "space-f2e1f3d7fd6f",
+    "resume_text": "1",
+    "jd_text": "1",
+    "target_company": "1",
+    "target_role": "1",
+    "notes": "1",
+    "updated_at": "2026-05-10T14:03:17.071590Z"
   }
 ]

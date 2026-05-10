@@ -1,14 +1,4 @@
 {
-  "providers": [
-    {
-      "id": "default",
-      "name": "Default (from .env)",
-      "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-      "model": "deepseek-v3.2",
-      "api_key": "sk-4a40d3848abd46f6bd2fb4dcd05609ce",
-      "temperature": 0.7,
-      "max_tokens": 4096
-    }
-  ],
-  "active_id": "default"
+  "providers": [],
+  "active_id": ""
 }

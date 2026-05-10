@@ -133,12 +133,11 @@ class InterviewReviewDraftService:
         interviewer_skill: str = "technical_interviewer",
         custom_skill: InterviewSkill | None = None,
         codebase_context: str = "",
+        revision_instruction: str = "",
     ) -> ReviewDraft:
-        prompt = self._build_review_prompt(profile, original_answer, interviewer_skill, custom_skill, codebase_context)
+        prompt = self._build_review_prompt(profile, original_answer, interviewer_skill, custom_skill, codebase_context, revision_instruction)
         if llm_client is None:
-            fallback = self.generate_draft(profile, original_answer)
-            fallback.token_usage = estimate_token_usage(prompt, fallback.suggested_answer + fallback.critique, provider="local_fallback")
-            return fallback
+            raise RuntimeError("LLM reviewer is not configured. Please select or configure an LLM before requesting AI review.")
         try:
             raw = await llm_client.chat(
                 message=prompt,
@@ -150,10 +149,7 @@ class InterviewReviewDraftService:
             draft.token_usage = estimate_token_usage(prompt, raw, provider="llm")
             return draft
         except Exception as exc:
-            fallback = self.generate_draft(profile, original_answer)
-            fallback.critique = f"LLM 审阅失败，已降级本地模板：{exc}\n\n{fallback.critique}"
-            fallback.token_usage = estimate_token_usage(prompt, fallback.suggested_answer + fallback.critique, provider="local_fallback")
-            return fallback
+            raise RuntimeError(f"LLM review failed: {exc}") from exc
 
     def _build_review_prompt(
         self,
@@ -162,39 +158,58 @@ class InterviewReviewDraftService:
         interviewer_skill: str,
         custom_skill: InterviewSkill | None = None,
         codebase_context: str = "",
+        revision_instruction: str = "",
     ) -> str:
         question = ""
         answer = original_answer
-        if "我的回答：" in original_answer:
-            question, answer = original_answer.split("我的回答：", 1)
+        for marker in ("\u6211\u7684\u56de\u7b54\uff1a", "\u6211\u7684\u56de\u7b54:"):
+            if marker in original_answer:
+                question, answer = original_answer.split(marker, 1)
+                break
+        question = question.replace("\u9762\u8bd5\u9898\uff1a", "").replace("\u9762\u8bd5\u9898:", "").strip()
+        answer = answer.strip()
         skill_instruction = custom_skill.instruction if custom_skill else InterviewQuestionService()._skill_instruction(interviewer_skill)
         skill_name = custom_skill.name if custom_skill else InterviewQuestionService()._skill_label(interviewer_skill)
         return f"""
-请按“{skill_name}”的风格审阅候选人的面试回答。
+You are a strict, specific and practical "{skill_name}" interviewer and interview coach. Review the candidate's interview answer and produce feedback that can directly help the candidate rewrite and practice the answer.
 
-Skill 要求：{skill_instruction}
+Interviewer skill requirements:
+{skill_instruction}
 
-请严格基于简历和 JD 判断回答是否有岗位匹配度、证据密度、表达结构和风险点。
-只输出 JSON：{{"critique":"总体评价、亮点、问题与风险、下一步追问","suggested_answer":"改写后的更优回答"}}
+Return valid JSON only. Do not wrap it in Markdown or code fences. The JSON schema is:
+{{
+  "critique": "Write in Chinese. Must include three clear sections: 1) \u4e0d\u8db3\u4e4b\u5904: at least 3 concrete weaknesses about missing facts, evidence, structure, technical depth or risks; 2) \u4fee\u6539\u5efa\u8bae: at least 3 actionable suggestions about project background, personal responsibility, technical details, trade-offs, metrics and outcomes; 3) \u53ef\u8ffd\u95ee\u70b9: 2-4 follow-up questions an interviewer may ask. Avoid generic feedback.",
+  "suggested_answer": "Write in Chinese. Provide a complete reference answer the candidate can practice directly. It must include background, task, actions, technical details, trade-offs/troubleshooting, outcome and reflection. If the original answer lacks data, use phrases like '\u5982\u679c\u5c5e\u5b9e\uff0c\u53ef\u4ee5\u8865\u5145...' instead of inventing metrics."
+}}
 
-目标公司：{profile.target_company or "未填写"}
-目标岗位：{profile.target_role or "未填写"}
-备注：{profile.notes or "无"}
+Quality rules:
+- Weaknesses must be sharp and concrete: explain what is missing and why it may trigger follow-up questions.
+- Suggestions must be executable, not empty advice like "be more specific" or "be more structured".
+- The reference answer should be complete prose, not an outline. Recommended length: 500-900 Chinese characters.
+- Ground the review in the resume, JD, target role and question. If context is missing, explicitly say how that limits the review.
+- Do not fabricate company names, metrics, production scale or responsibility boundaries. Use replaceable placeholders when necessary.
 
-简历：
-{profile.resume_text[:6000] or "未填写"}
+Target company: {profile.target_company or "not provided"}
+Target role: {profile.target_role or "not provided"}
+Notes: {profile.notes or "none"}
 
-岗位 JD：
-{profile.jd_text[:6000] or "未填写"}
+Resume:
+{profile.resume_text[:6000] or "not provided"}
 
-代码库技术档案：
-{codebase_context[:8000] if codebase_context.strip() else "未选择或未生成技术档案"}
+Job description:
+{profile.jd_text[:6000] or "not provided"}
 
-面试题：
-{question.strip() or "未单独提供"}
+Codebase technical profile:
+{codebase_context[:8000] if codebase_context.strip() else "not selected or not generated"}
 
-候选人回答：
-{answer.strip()}
+Interview question:
+{question or "not separately provided"}
+
+Candidate answer:
+{answer or "not provided"}
+
+User revision instruction:
+{revision_instruction.strip() or "none"}
 """.strip()
 
     def _parse_llm_review(self, original_answer: str, raw: str) -> ReviewDraft:
@@ -206,13 +221,25 @@ Skill 要求：{skill_instruction}
         end = text.rfind("}")
         if start >= 0 and end > start:
             text = text[start : end + 1]
-        payload = json.loads(text)
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            return ReviewDraft(
+                original_answer=original_answer,
+                suggested_answer=raw.strip() or original_answer,
+                critique="LLM did not return valid JSON, so the raw output is preserved. Check whether the model follows the JSON-only instruction.",
+            )
+        critique = str(payload.get("critique") or "").strip()
+        suggested_answer = str(payload.get("suggested_answer") or "").strip()
+        if not critique:
+            critique = "LLM did not return explicit review feedback. Please retry or check the model configuration."
+        if not suggested_answer:
+            suggested_answer = original_answer
         return ReviewDraft(
             original_answer=original_answer,
-            suggested_answer=str(payload.get("suggested_answer") or original_answer).strip(),
-            critique=str(payload.get("critique") or "LLM 未返回明确评价。").strip(),
+            suggested_answer=suggested_answer,
+            critique=critique,
         )
-
 
 def estimate_token_usage(prompt: str, completion: str, provider: str) -> dict:
     prompt_tokens = max(1, len(prompt) // 4)

@@ -1,4 +1,14 @@
-﻿import type { InterviewQuestion } from '@/types/interview'
+import type { InterviewQuestion } from '@/types/interview'
+
+export interface QuestionPracticeAttempt {
+  attemptId: string
+  answeredAt: string
+  originalAnswer: string
+  critique: string
+  suggestedAnswer: string
+  reviewId?: string
+  reviewStatus?: string
+}
 
 export interface SavedInterviewQuestion extends InterviewQuestion {
   id: string
@@ -6,6 +16,7 @@ export interface SavedInterviewQuestion extends InterviewQuestion {
   favorited: boolean
   favoritedAt?: string
   lastReviewedAt?: string
+  attempts?: QuestionPracticeAttempt[]
 }
 
 const storageKey = (spaceId: string) => `shadowlink:interview:saved-questions:${spaceId}`
@@ -29,6 +40,8 @@ export const loadSavedQuestions = (spaceId: string): SavedInterviewQuestion[] =>
 export const saveQuestions = (spaceId: string, questions: SavedInterviewQuestion[]) => {
   localStorage.setItem(storageKey(spaceId), JSON.stringify(questions))
 }
+
+export const makePracticeAttemptId = () => `attempt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
 export const mergeGeneratedQuestions = (spaceId: string, generated: InterviewQuestion[]) => {
   const existing = loadSavedQuestions(spaceId)

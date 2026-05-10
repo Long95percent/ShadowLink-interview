@@ -1,5 +1,5 @@
 import type { ApiResult } from '@/types'
-import type { ExternalAgentRun, GenerateInterviewQuestionsResponse, InterviewReview, InterviewSession, InterviewSkill, ParsedResumeResponse, ReadingProgress, SentenceExplanation, SpaceDetail, SpaceProfile, SpaceType } from '@/types/interview'
+import type { ExternalAgentRun, GenerateInterviewQuestionsResponse, InterviewReview, InterviewSession, InterviewSkill, ParsedResumeResponse, ProjectDocument, ReadingProgress, SentenceExplanation, SpaceDetail, SpaceProfile, SpaceType } from '@/types/interview'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/v1/interview${path}`, {
@@ -31,6 +31,17 @@ export const interviewApi = {
       method: 'POST',
       body: JSON.stringify({ name, type, theme }),
     })
+  },
+
+  updateSpace(spaceId: string, name: string, type: SpaceType, theme: string): Promise<SpaceDetail> {
+    return request<SpaceDetail>(`/spaces/${spaceId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name, type, theme }),
+    })
+  },
+
+  deleteSpace(spaceId: string): Promise<{ deleted: boolean }> {
+    return request<{ deleted: boolean }>(`/spaces/${spaceId}`, { method: 'DELETE' })
   },
 
   updateProfile(spaceId: string, profile: Omit<SpaceProfile, 'space_id' | 'updated_at'>): Promise<SpaceProfile> {
@@ -89,6 +100,44 @@ export const interviewApi = {
     return body.data as ParsedResumeResponse
   },
 
+  async parseResumeDraft(file: File): Promise<ParsedResumeResponse> {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetch('/v1/interview/profile/resume/parse', {
+      method: 'POST',
+      body: form,
+    })
+    if (!response.ok) {
+      throw new Error(await response.text())
+    }
+    const body: ApiResult<ParsedResumeResponse> = await response.json()
+    if (!body.success) {
+      throw new Error(body.message)
+    }
+    return body.data as ParsedResumeResponse
+  },
+
+  listProjectDocuments(spaceId: string): Promise<ProjectDocument[]> {
+    return request<ProjectDocument[]>(`/spaces/${spaceId}/project-documents`)
+  },
+
+  async uploadProjectDocument(spaceId: string, file: File): Promise<ProjectDocument> {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetch(`/v1/interview/spaces/${spaceId}/project-documents/upload`, {
+      method: 'POST',
+      body: form,
+    })
+    if (!response.ok) throw new Error(await response.text())
+    const body: ApiResult<{ document: ProjectDocument }> = await response.json()
+    if (!body.success) throw new Error(body.message)
+    return body.data?.document as ProjectDocument
+  },
+
+  deleteProjectDocument(documentId: string): Promise<{ deleted: boolean }> {
+    return request<{ deleted: boolean }>(`/project-documents/${documentId}`, { method: 'DELETE' })
+  },
+
   generateQuestions(
     spaceId: string,
     count = 5,
@@ -127,6 +176,7 @@ export const interviewApi = {
     interviewerSkill = 'technical_interviewer',
     llmConfig?: unknown,
     codebaseRepoId?: string,
+    revisionInstruction = '',
   ): Promise<InterviewReview> {
     return request<InterviewReview>(`/spaces/${spaceId}/sessions/${sessionId}/reviews`, {
       method: 'POST',
@@ -137,6 +187,7 @@ export const interviewApi = {
         interviewer_skill: interviewerSkill,
         llm_config: llmConfig,
         codebase_repo_id: codebaseRepoId || null,
+        revision_instruction: revisionInstruction,
       }),
     })
   },
