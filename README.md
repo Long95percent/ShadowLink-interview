@@ -235,6 +235,9 @@ SHADOWLINK_ENV=dev
 SHADOWLINK_LOG_LEVEL=INFO
 SHADOWLINK_DATA_DIR=./data
 
+# 旧桌面应用聊天数据库；默认 data/chat_history.db，可按需改到仓库外
+SHADOWLINK_CHAT_DB=./data/chat_history.db
+
 SHADOWLINK_LLM_BASE_URL=https://api.openai.com/v1
 SHADOWLINK_LLM_MODEL=gpt-4o-mini
 SHADOWLINK_LLM_API_KEY=
@@ -264,7 +267,10 @@ SHADOWLINK_FILE_OCR_ENABLED=false
 
 ```text
 shadowlink-ai/data
+data/chat_history.db
 ```
+
+如果需要长期使用并保留数据，建议保持 `SHADOWLINK_DATA_DIR=./data`，让运行期 JSON、上传文件和索引落在本地 `data/` 下；旧桌面端聊天历史默认写入 `data/chat_history.db`。这些路径已在 `.gitignore` 中忽略，不会随普通提交上传。
 
 面试学习模块使用 JSON 过渡层：
 
@@ -285,11 +291,12 @@ shadowlink-ai/data/interview/reading_progress.json
 models/
 rag_indexes/
 chat_history.db
+data/chat_history.db
 llm_config.json
 tasks_config.json
 ```
 
-这些通常属于本地运行产物，不建议提交到 Git。
+这些通常属于本地运行产物，不建议提交到 Git。API Key 推荐放在本地 `.env` 或运行后的 `shadowlink-ai/data/llm_providers.json` 中；不要把真实 Key 写入示例配置。
 
 ## 测试与检查
 

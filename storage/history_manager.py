@@ -2,14 +2,28 @@ import sqlite3
 import os
 import time
 import uuid
+from pathlib import Path
+
+
+def _default_db_path() -> str:
+    """Return a persistent local DB path that is ignored by Git by default."""
+    configured = os.getenv("SHADOWLINK_CHAT_DB")
+    if configured:
+        return configured
+
+    data_dir = Path(os.getenv("SHADOWLINK_DATA_DIR", "data"))
+    return str(data_dir / "chat_history.db")
 
 class HistoryManager:
-    def __init__(self, db_path="chat_history.db"):
+    def __init__(self, db_path=None):
+        db_path = db_path or _default_db_path()
         self.db_path = db_path
         self._init_db()
         self.cleanup_old_sessions(30)
 
     def _init_db(self):
+        db_parent = Path(self.db_path).expanduser().resolve().parent
+        db_parent.mkdir(parents=True, exist_ok=True)
         with sqlite3.connect(self.db_path) as conn:
             c = conn.cursor()
             c.execute('''CREATE TABLE IF NOT EXISTS sessions (
