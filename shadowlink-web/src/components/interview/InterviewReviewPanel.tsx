@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { InterviewParticleField } from '@/components/interview/InterviewParticleField'
 import { getReviewLevel, loadSavedQuestions, makePracticeAttemptId, mergeGeneratedQuestions, saveQuestions, type SavedInterviewQuestion } from '@/components/interview/questionReviewState'
 import { codebaseApi } from '@/services/codebase'
@@ -25,6 +25,7 @@ export function InterviewReviewPanel({ detail, customSkills = [] }: InterviewRev
   const [selectedCodebaseRepoId, setSelectedCodebaseRepoId] = useState('')
   const [projectDocuments, setProjectDocuments] = useState<ProjectDocument[]>([])
   const [practiceMode, setPracticeMode] = useState(false)
+  const [questionDrawerOpen, setQuestionDrawerOpen] = useState(false)
   const [reviewDrawerOpen, setReviewDrawerOpen] = useState(false)
   const [favoriteRepositoryOpen, setFavoriteRepositoryOpen] = useState(false)
   const [selectedRepositoryQuestionId, setSelectedRepositoryQuestionId] = useState<string | null>(null)
@@ -32,6 +33,7 @@ export function InterviewReviewPanel({ detail, customSkills = [] }: InterviewRev
   const [showJd, setShowJd] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const questionsRef = useRef<SavedInterviewQuestion[]>([])
   const activeLlmId = useSettingsStore((state) => state.activeLlmId)
   const llmConfigs = useSettingsStore((state) => state.llmConfigs)
   const llmConfig = llmConfigs.find((config) => config.id === activeLlmId) ?? llmConfigs[0]
@@ -54,12 +56,15 @@ export function InterviewReviewPanel({ detail, customSkills = [] }: InterviewRev
   useEffect(() => {
     setActiveSession(null)
     setReviews([])
+    questionsRef.current = []
     setQuestions([])
     setActiveIndex(0)
     setAnswer('')
     setMessage(null)
     if (!detail) return
-    setQuestions(loadSavedQuestions(detail.space.space_id))
+    const savedQuestions = loadSavedQuestions(detail.space.space_id)
+    questionsRef.current = savedQuestions
+    setQuestions(savedQuestions)
     interviewApi.listProjectDocuments(detail.space.space_id).then(setProjectDocuments).catch(() => undefined)
     interviewApi.listSessions(detail.space.space_id).then((items) => setActiveSession(items[0] ?? null))
   }, [detail?.space.space_id])
@@ -74,19 +79,24 @@ export function InterviewReviewPanel({ detail, customSkills = [] }: InterviewRev
   }
 
   const persistQuestions = (nextQuestions: SavedInterviewQuestion[]) => {
+    questionsRef.current = nextQuestions
     setQuestions(nextQuestions)
     saveQuestions(detail.space.space_id, nextQuestions)
   }
 
+  const updateQuestions = (updater: (currentQuestions: SavedInterviewQuestion[]) => SavedInterviewQuestion[]) => {
+    persistQuestions(updater(questionsRef.current))
+  }
+
   const updateQuestionAttemptStatus = (reviewId: string, reviewStatus: string) => {
-    persistQuestions(questions.map((question) => ({
+    updateQuestions((currentQuestions) => currentQuestions.map((question) => ({
       ...question,
       attempts: question.attempts?.map((attempt) => (attempt.reviewId === reviewId ? { ...attempt, reviewStatus } : attempt)),
     })))
   }
 
   const appendPracticeAttempt = (questionId: string, originalAnswer: string, review: InterviewReview) => {
-    persistQuestions(questions.map((question) => (question.id === questionId ? {
+    updateQuestions((currentQuestions) => currentQuestions.map((question) => (question.id === questionId ? {
       ...question,
       attempts: [
         {
@@ -117,6 +127,7 @@ export function InterviewReviewPanel({ detail, customSkills = [] }: InterviewRev
     try {
       const result = await interviewApi.generateQuestions(detail.space.space_id, 5, 'mixed', interviewerSkill, llmConfig, selectedCodebaseRepoId)
       const merged = mergeGeneratedQuestions(detail.space.space_id, result.questions)
+      questionsRef.current = merged
       setQuestions(merged)
       setActiveIndex(0)
       setQuestionProvider(result.provider)
@@ -132,7 +143,7 @@ export function InterviewReviewPanel({ detail, customSkills = [] }: InterviewRev
   const toggleFavorite = () => {
     if (!activeQuestion) return
     const now = new Date().toISOString()
-    persistQuestions(questions.map((question) => question.id === activeQuestion.id
+    updateQuestions((currentQuestions) => currentQuestions.map((question) => question.id === activeQuestion.id
       ? { ...question, favorited: !question.favorited, favoritedAt: question.favorited ? question.favoritedAt : now }
       : question,
     ))
@@ -141,7 +152,7 @@ export function InterviewReviewPanel({ detail, customSkills = [] }: InterviewRev
   const markReviewed = () => {
     if (!activeQuestion) return
     const now = new Date().toISOString()
-    persistQuestions(questions.map((question) => question.id === activeQuestion.id ? { ...question, lastReviewedAt: now } : question))
+    updateQuestions((currentQuestions) => currentQuestions.map((question) => question.id === activeQuestion.id ? { ...question, lastReviewedAt: now } : question))
     setMessage('已记录本题复习时间。')
   }
 
@@ -239,8 +250,27 @@ ${answer}` : answer
   const nextQuestion = () => {
     setActiveIndex((index) => Math.min(questions.length - 1, index + 1))
     setAnswer('')
+    setReviews([])
+    setRevisionInstruction('')
+    setReviewDrawerOpen(false)
   }
-  const previousQuestion = () => setActiveIndex((index) => Math.max(0, index - 1))
+  const previousQuestion = () => {
+    setActiveIndex((index) => Math.max(0, index - 1))
+    setAnswer('')
+    setReviews([])
+    setRevisionInstruction('')
+    setReviewDrawerOpen(false)
+  }
+
+  const selectQuestion = (index: number) => {
+    if (index < 0 || index >= questions.length) return
+    setActiveIndex(index)
+    setAnswer('')
+    setReviews([])
+    setRevisionInstruction('')
+    setReviewDrawerOpen(false)
+    setQuestionDrawerOpen(false)
+  }
 
   const openFavoriteQuestion = (questionId: string) => {
     const nextIndex = questions.findIndex((question) => question.id === questionId)
@@ -255,7 +285,7 @@ ${answer}` : answer
   }
 
   const removeFavoriteQuestion = (questionId: string) => {
-    persistQuestions(questions.map((question) => question.id === questionId
+    updateQuestions((currentQuestions) => currentQuestions.map((question) => question.id === questionId
       ? { ...question, favorited: false }
       : question,
     ))
@@ -343,13 +373,53 @@ ${answer}` : answer
         <div className="fixed inset-0 z-40 flex overflow-hidden bg-[#080A12] text-foreground">
           <InterviewParticleField />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.08),transparent_42%),linear-gradient(180deg,rgba(8,10,18,0.18),rgba(8,10,18,0.62))]" />
+          <aside className={`relative z-10 h-full border-r border-white/10 bg-surface/95 transition-all duration-300 ${questionDrawerOpen ? 'w-[360px]' : 'w-0 overflow-hidden'}`}>
+            <div className="flex h-full w-[360px] flex-col">
+              <div className="border-b border-white/10 p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-primary">题目列表</div>
+                    <h3 className="mt-1 text-lg font-semibold text-foreground">全部面试题</h3>
+                  </div>
+                  <button onClick={() => setQuestionDrawerOpen(false)} className="rounded-lg bg-surface-secondary px-3 py-1.5 text-sm text-foreground">关闭</button>
+                </div>
+                <p className="mt-2 text-xs text-muted">共 {questions.length} 道题，点击任意题目立即切换练习。</p>
+              </div>
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+                {questions.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-surface-tertiary bg-surface-secondary p-5 text-sm text-muted">暂无题目，请先生成面试题。</div>
+                ) : questions.map((question, index) => {
+                  const selected = index === activeIndex
+                  const attemptCount = question.attempts?.length ?? 0
+                  return (
+                    <button
+                      key={question.id}
+                      onClick={() => selectQuestion(index)}
+                      className={`w-full rounded-2xl border p-4 text-left transition hover:border-primary/60 hover:bg-primary/10 ${selected ? 'border-primary/70 bg-primary/15 shadow-lg shadow-primary/10' : 'border-surface-tertiary bg-surface-secondary'}`}
+                    >
+                      <div className="flex items-center justify-between gap-2 text-xs text-muted">
+                        <span>第 {index + 1} 题</span>
+                        <span>{attemptCount > 0 ? `${attemptCount} 次练习` : '未练习'}</span>
+                      </div>
+                      <div className="mt-2 line-clamp-3 text-sm font-semibold leading-relaxed text-foreground">{question.question}</div>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
+                        {question.focus && <span className="rounded-full bg-surface px-2 py-1">{question.focus}</span>}
+                        {question.favorited && <span className="rounded-full bg-yellow-500/20 px-2 py-1 text-yellow-100">已收藏</span>}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </aside>
           <main className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
               <div>
                 <div className="text-xs uppercase tracking-[0.25em] text-primary">{detail.space.name}</div>
-                <div className="mt-1 text-sm text-muted">第 {questions.length ? activeIndex + 1 : 0} / {questions.length} 题 ? {interviewerSkill}</div>
+                <div className="mt-1 text-sm text-muted">第 {questions.length ? activeIndex + 1 : 0} / {questions.length} 题 · {interviewerSkill}</div>
               </div>
               <div className="flex items-center gap-2">
+                <button onClick={() => setQuestionDrawerOpen((value) => !value)} className="rounded-xl bg-white/10 px-4 py-2 text-sm text-white">{questionDrawerOpen ? '收起题目' : '题目列表'}</button>
                 <button onClick={() => setReviewDrawerOpen((value) => !value)} className="rounded-xl bg-white/10 px-4 py-2 text-sm text-white">{reviewDrawerOpen ? '收起审阅' : '打开审阅'}</button>
                 <button onClick={() => setPracticeMode(false)} className="rounded-xl bg-white/10 px-4 py-2 text-sm text-white">退出</button>
               </div>
@@ -366,7 +436,7 @@ ${answer}` : answer
                   <>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary">第 {activeIndex + 1} 题</div>
-                      {reviewHint && <span className={`rounded-full px-3 py-1 text-xs ${reviewHint.tone}`}>{reviewHint.label}{reviewHint.days > 0 ? ` ? ${reviewHint.days}天` : ''}</span>}
+                      {reviewHint && <span className={`rounded-full px-3 py-1 text-xs ${reviewHint.tone}`}>{reviewHint.label}{reviewHint.days > 0 ? ` · ${reviewHint.days}天` : ''}</span>}
                     </div>
                     <h2 className="mt-5 text-2xl font-semibold leading-relaxed text-foreground">{activeQuestion.question}</h2>
                     {activeQuestion.answer_hint && <div className="mt-4 rounded-2xl bg-primary/10 p-4 text-sm leading-relaxed text-muted">提示：{activeQuestion.answer_hint}</div>}
@@ -583,3 +653,4 @@ function ContentModal({ title, content, onClose }: { title: string; content: str
     </div>
   )
 }
+

@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import json
+import shutil
+import uuid
+from pathlib import Path
+
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
+from app.agent.memory.long_term import LongTermMemory
 from app.agent.memory.short_term import ShortTermMemory
 
 
@@ -51,3 +57,18 @@ class TestShortTermMemory:
     def test_to_context_empty(self):
         ctx = self.memory.to_context("nonexistent")
         assert ctx == {}
+
+
+class TestLongTermMemory:
+    def test_loads_empty_list_file_as_empty_store(self):
+        storage_path = Path(".test-data") / f"long-term-memory-{uuid.uuid4().hex}"
+        try:
+            storage_path.mkdir(parents=True)
+            memory_file = storage_path / "long_term.json"
+            memory_file.write_text(json.dumps([]), encoding="utf-8")
+
+            memory = LongTermMemory(storage_path=str(storage_path))
+
+            assert memory.to_context() == {}
+        finally:
+            shutil.rmtree(storage_path, ignore_errors=True)

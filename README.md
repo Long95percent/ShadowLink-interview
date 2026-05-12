@@ -53,6 +53,66 @@ shadowlink-electron Electron 壳，后续桌面化预留
 
 ## 快速启动
 
+## LLM Prompt 调试清单
+
+项目里给 LLM 的 prompt 主要分为三类：后端源码内置 prompt、前端/用户配置 prompt、以及运行时用户输入。调试时优先看下面这些文件。
+
+### 后端内置 Prompt 文件
+
+| 文件 | 用途 | 热启动情况 |
+| --- | --- | --- |
+| `shadowlink-ai/app/agent/engine.py` | Agent 模式默认 system prompt（`MODE_SYSTEM_PROMPTS`），没有前端自定义 system prompt 时使用。 | Python 后端以 `--reload` 启动时，保存后会自动重载。 |
+| `shadowlink-ai/app/agent/react/executor.py` | ReAct 执行器把 system prompt 和用户消息组装成 `SystemMessage` / `HumanMessage`。 | 自动重载。 |
+| `shadowlink-ai/app/agent/react/graph.py` | ReAct 反思/质量检查 prompt（reasoning reflection）。 | 自动重载。 |
+| `shadowlink-ai/app/agent/react/nodes.py` | ReAct graph 注入 system prompt 的节点逻辑。 | 自动重载。 |
+| `shadowlink-ai/app/agent/plan_execute/planner.py` | Plan & Execute 的规划器 prompt（生成步骤计划）。 | 自动重载。 |
+| `shadowlink-ai/app/agent/plan_execute/replan.py` | Plan & Execute 的重规划 prompt。 | 自动重载。 |
+| `shadowlink-ai/app/agent/plan_execute/graph.py` | Plan & Execute 汇总已完成步骤、生成最终回答的 prompt。 | 自动重载。 |
+| `shadowlink-ai/app/agent/plan_execute/executor.py` | Plan & Execute 执行入口，负责把请求上下文交给 planner/graph。 | 自动重载。 |
+| `shadowlink-ai/app/agent/plan_execute/stream_executor.py` | Plan & Execute 流式执行入口。 | 自动重载。 |
+| `shadowlink-ai/app/agent/multi_agent/supervisor.py` | 多 Agent supervisor 路由/决策 prompt。 | 自动重载。 |
+| `shadowlink-ai/app/agent/multi_agent/hierarchical.py` | 分层多 Agent 编排 prompt/消息组装。 | 自动重载。 |
+| `shadowlink-ai/app/agent/multi_agent/swarm.py` | Swarm 多 Agent 协作 prompt/消息组装。 | 自动重载。 |
+| `shadowlink-ai/app/codebase/service.py` | 代码库技术档案生成的默认 prompt（`DEFAULT_CODEBASE_PROMPT`），会发给 Codex 专家适配器。 | 自动重载；已在跑的后台任务不会中途换 prompt。 |
+| `shadowlink-ai/app/interview/review_service.py` | 面试题生成 prompt、面试回答审阅 prompt、`revision_instruction` 重生成逻辑、本地 fallback 模板。 | 自动重载。 |
+| `shadowlink-ai/app/api/v1/interview_router.py` | 面试审阅/出题接口入口，决定把前端参数传给 `review_service.py`。 | 自动重载。 |
+| `shadowlink-ai/app/rag/retrieval/multi_query.py` | RAG 多查询改写 prompt。 | 自动重载。 |
+| `shadowlink-ai/app/rag/retrieval/self_rag.py` | Self-RAG 检索/判断相关 prompt。 | 自动重载。 |
+| `shadowlink-ai/app/rag/reranking/llm_rerank.py` | LLM rerank 相关性打分 prompt（`LLM_RERANK_PROMPT`）。 | 自动重载。 |
+| `shadowlink-ai/app/rag/chunking/agentic.py` | Agentic chunking 分块/摘要类 prompt。 | 自动重载。 |
+| `shadowlink-ai/app/llm/providers/openai.py` | OpenAI-compatible provider 的最终 `messages` 组装位置；通常不改 prompt 内容，只用于确认最终请求结构。 | 自动重载。 |
+| `shadowlink-ai/app/llm/providers/anthropic.py` | Anthropic provider 的最终消息组装位置。 | 自动重载。 |
+
+### 前端/用户可编辑 Prompt 入口
+
+| 文件 | 用途 | 热启动情况 |
+| --- | --- | --- |
+| `shadowlink-web/src/components/ambient/ModeSettingsModal.tsx` | Agent 模式的自定义 System Prompt 编辑 UI。 | Vite 热更新；保存到前端状态/localStorage 后，下次请求立即生效。 |
+| `shadowlink-web/src/hooks/useAgent.ts` | 把当前模式的 `systemPrompt` 作为请求 context 传给后端 Agent。 | Vite 热更新。 |
+| `shadowlink-web/src/components/interview/InterviewSkillManager.tsx` | 自定义面试官 Skill 的 instruction 编辑/上传 UI。 | Vite 热更新；保存后后端 JSON 数据立即被后续请求读取。 |
+| `shadowlink-web/src/components/interview/InterviewReviewPanel.tsx` | 面试出题、审阅、重生成审阅时传入 `interviewerSkill`、`revisionInstruction`、当前题目和回答。 | Vite 热更新；正在进行中的请求不会中途改变。 |
+| `shadowlink-web/src/services/interview.ts` | 前端面试模块请求体组装，包括 `interviewer_skill`、`revision_instruction`、LLM 配置。 | Vite 热更新。 |
+| `shadowlink-web/src/services/codebase.ts` | 代码库文档生成请求体，可传自定义 prompt。 | Vite 热更新。 |
+| `shadowlink-ai/app/interview/repository.py` | 自定义面试官 Skill 持久化到 `storage/interview/interview_skills.json`。 | 数据文件保存后后续请求立即读取，无需重启。 |
+
+### 运行时数据型 Prompt
+
+这些不是固定源码 prompt，但会进入 LLM 请求：
+
+- Agent 用户消息：前端聊天输入，经 `shadowlink-web/src/hooks/useAgent.ts` 发送。
+- 面试回答审阅：练习界面的题目、用户回答、简历、JD、目标岗位、代码库技术档案，由 `shadowlink-ai/app/interview/review_service.py` 拼入审阅 prompt。
+- 重新生成审阅：练习界面的修改意见 `revisionInstruction`，最终进入 `revision_instruction`。
+- 代码库技术档案：`shadowlink-web/src/services/codebase.ts` 可传 prompt；为空时使用 `shadowlink-ai/app/codebase/service.py` 的默认 prompt。
+- RAG 查询：用户 query 会进入 multi-query、self-rag、rerank 等 RAG prompt。
+
+### Prompt 热启动/热更新说明
+
+- `start.bat` 启动 Python AI 服务时使用的是 `python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`，所以修改 `shadowlink-ai/app/**.py` 里的 prompt 后，后端会自动重载；下一次请求使用新 prompt。
+- `start.bat` 启动 Web 时使用 `npx vite --port 3000`，所以修改 `shadowlink-web/src/**` 后前端会热更新；下一次前端请求使用新请求体逻辑。
+- 运行中的 LLM 请求、后台任务、流式响应不会中途切换 prompt；需要重新点一次生成/审阅/聊天。
+- 修改 `llm_config.json`、环境变量、依赖、Java 网关代码或启动参数时，建议手动重启对应服务。
+- 自定义面试官 Skill 保存在 `storage/interview/interview_skills.json`，通过 UI 保存后后续请求立即生效；如果直接手改 JSON，也建议刷新页面以更新下拉框。
+
 ### Windows 一键启动
 
 在仓库根目录运行：

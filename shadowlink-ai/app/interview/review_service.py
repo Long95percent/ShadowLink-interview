@@ -141,7 +141,7 @@ class InterviewReviewDraftService:
         try:
             raw = await llm_client.chat(
                 message=prompt,
-                system_prompt="你是资深面试官和职业教练。只输出 JSON，不要输出 Markdown。",
+                system_prompt="你是资深面试官和技术人员。只输出 JSON，不要输出 Markdown。",
                 temperature=0.5,
                 max_tokens=2200,
             )
@@ -188,7 +188,7 @@ Quality rules:
 - The reference answer should be complete prose, not an outline. Recommended length: 500-900 Chinese characters.
 - Ground the review in the resume, JD, target role and question. If context is missing, explicitly say how that limits the review.
 - Do not fabricate company names, metrics, production scale or responsibility boundaries. Use replaceable placeholders when necessary.
-
+- Avoid listing overly detailed fields in the project, such as the XXX field included when writing to the database.
 Target company: {profile.target_company or "not provided"}
 Target role: {profile.target_role or "not provided"}
 Notes: {profile.notes or "none"}

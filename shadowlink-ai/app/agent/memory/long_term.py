@@ -73,8 +73,13 @@ class LongTermMemory:
         if memory_file.exists():
             try:
                 data = json.loads(memory_file.read_text(encoding="utf-8"))
+                if isinstance(data, list):
+                    data = {}
+                if not isinstance(data, dict):
+                    self._memories = {}
+                    return
                 self._memories = {k: MemoryEntry.from_dict(v) for k, v in data.items()}
-            except (json.JSONDecodeError, KeyError):
+            except (json.JSONDecodeError, KeyError, TypeError):
                 self._memories = {}
 
     def _save(self) -> None:
